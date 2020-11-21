@@ -1,0 +1,3 @@
+syntax = "proto3";
+package pt.tecnico.rrrd.contract;
+
