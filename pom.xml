@@ -16,6 +16,7 @@
         <module>RRRD-Client</module>
         <module>RRRD-Contract</module>
         <module>RRRD-Server</module>
+        <module>RRRD-Crypto</module>
     </modules>
 
     <properties>
