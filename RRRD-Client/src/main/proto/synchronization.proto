@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+package pt.tecnico.rrrd.client;
+
+service Synchronization {
+  rpc Pull (PullRequest) returns (PullResponse) {}
+  rpc Push (PushRequest) returns (PushResponse) {}
+}
+
+message PullRequest {
+  PullMessage message = 1;
+  string signature = 2;
+}
+
+message PullMessage {
+  string documentId = 1;
+  string timestamp = 2;
+}
+
+message PullResponse {
+  string document = 1;
+  string documentKey = 2;
+}
+
+message PushRequest {
+  PushMessage message = 1;
+  string signature = 2;
+}
+
+message PushMessage {
+  string documentId = 1;
+  string encryptedDocument = 2;
+  string timestamp = 3;
+}
+  
+message PushResponse {
+  string message = 1;
+}
