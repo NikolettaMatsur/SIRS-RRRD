@@ -1,12 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>pt.tecnico.rrrd.A44</groupId>
+    <parent>
+        <groupId>pt.tecnico.rrrd.A44</groupId>
+        <artifactId>SIRS-RRRD</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
     <artifactId>RRRD-Client</artifactId>
+    <packaging>jar</packaging>
+    <name>${project.artifactId}</name>
     <version>1.0-SNAPSHOT</version>
 
-    
+    <properties>
+		<!-- application properties - can be overridden in command line with -D -->
+		<p>pt.tecnico.rrrd.client</p>
+		<c>RrrdClientApp</c>
+		<mainclass>${p}.${c}</mainclass>
+		<!-- arguments are defined in exec plugin -->
+	</properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>pt.tecnico.rrrd.A44</groupId>
+            <artifactId>RRRD-Contract</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>pt.tecnico.rrrd.A44</groupId>
+            <artifactId>RRRD-Crypto</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+
+        <extensions>
+        </extensions>
+
+        <plugins>
+            <!-- Plugin that provides two goals to execute system and Java programs -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.6.0</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>java</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<!-- to prevent deprecation warning: -->
+					<killAfter>-1</killAfter>
+					<mainClass>${mainclass}</mainClass>
+					<arguments>
+						<!-- can be defined here with multiple argument tags,
+						or in command line with -Dexec.args="arg0 arg1 arg2" -->
+					</arguments>
+				</configuration>
+			</plugin>
+        </plugins>
+    </build>
 </project>

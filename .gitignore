@@ -2,4 +2,6 @@
 /RRRD-Contract/RRRD-Contract.iml
 /RRRD-Client/RRRD-Client.iml
 /RRRD-Backup/RRRD-Backup.iml
+/RRRD-Crypto/RRRD-Crypto.iml
 /.idea/
+/*/target/
