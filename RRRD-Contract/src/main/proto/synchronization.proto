@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-package pt.tecnico.rrrd.client;
+package pt.tecnico.rrrd.contract;
 
 service Synchronization {
   rpc Pull (PullRequest) returns (PullResponse) {}
