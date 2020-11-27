@@ -3,7 +3,7 @@ syntax = "proto3";
 option java_multiple_files = true;
 package pt.tecnico.rrrd.contract;
 
-service Synchronization {
+service RemoteServer {
   rpc Pull (PullRequest) returns (PullResponse) {}
   rpc Push (PushRequest) returns (PushResponse) {}
 }
