@@ -3,14 +3,11 @@ package pt.tecnico.rrrd.client;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import pt.tecnico.rrrd.client.command.*;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc;
-import pt.tecnico.rrrd.crypto.CryptographicOperations;
-import pt.tecnico.rrrd.client.communication.MessageFactory;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
 
-import java.security.*;
-import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 public class RrrdClientApp {
@@ -41,6 +38,20 @@ public class RrrdClientApp {
         RrrdClientAPI clientAPI = new RrrdClientAPI(client.blockingStub, client.asyncStub);
 
         clientAPI.pull();
+
+        ICommandHandler commandHandler = new CommandHandler();
+        ICommand command = null;
+
+        String input = ""; // TODO receive from the command line
+        switch (input) {
+            case "pull":
+                command = new Pull();
+                break;
+            case "push":
+                command = new Push();
+        }
+
+        command.accept(commandHandler);
 
         channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
 
