@@ -15,7 +15,7 @@ import java.util.NoSuchElementException;
 
 public class CryptographicOperations {
 
-    private static final String KEYSTORE_PATH = "/home/andre/Documents/SIRS/Project/SIRS-RRRD/RRRD-Crypto/src/main/resources/KeyStore.jks";
+    private static final String KEYSTORE_PATH = "/media/sf_SIRSCode/SIRS-RRRD/RRRD-Crypto/src/main/resources/KeyStore.jks";
     private static final String SYMMETRIC_ALGORITHM = "AES";
     private static int SYMMETRIC_KEY_SIZE = 256;
     private static final String ASYMMETRIC_ALGORITHM = "RSA";

@@ -8,6 +8,8 @@ import pt.tecnico.rrrd.contract.RemoteServerGrpc;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class RrrdClientApp {
@@ -16,8 +18,8 @@ public class RrrdClientApp {
     private final RemoteServerStub asyncStub;
 
     public RrrdClientApp(Channel channel) {
-        blockingStub = RemoteServerGrpc.newBlockingStub(channel);
-        asyncStub = RemoteServerGrpc.newStub(channel);
+        this.blockingStub = RemoteServerGrpc.newBlockingStub(channel);
+        this.asyncStub = RemoteServerGrpc.newStub(channel);
     }
 
     public static void main(String[] args) throws Exception{
@@ -27,33 +29,28 @@ public class RrrdClientApp {
             System.err.printf("Usage: java %s host port ", RrrdClientApp.class.getName());
             return;
         }
-
+        System.out.println(Arrays.toString(args));
         final String address = args[0];
         final int port = Integer.parseInt(args[1]);
+        final String commandInput = args[2];
 
         String target = address + ":" + port ;
 
         ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         RrrdClientApp client = new RrrdClientApp(channel);
-        RrrdClientAPI clientAPI = new RrrdClientAPI(client.blockingStub, client.asyncStub);
 
-        clientAPI.pull();
-
-        ICommandHandler commandHandler = new CommandHandler();
+        ICommandHandler commandHandler = new CommandHandler(client.blockingStub, client.asyncStub);
         ICommand command = null;
-
-        String input = ""; // TODO receive from the command line
-        switch (input) {
+        switch (commandInput) {
             case "pull":
-                command = new Pull();
+                command = new Pull(args[3], args[4]); // TODO output path of the document, keystore passwords
                 break;
             case "push":
-                command = new Push();
+                command = new Push(args[3], args[4]);
         }
 
         command.accept(commandHandler);
 
         channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
-
     }
 }
