@@ -16,9 +16,13 @@
     </parent>
 
     <properties>
+        <server.mainClass>pt.tecnico.rrrd.server.RrrdServerApp</server.mainClass>
         <server.address>localhost</server.address>
         <server.port>8080</server.port>
+        <server.backupAddress>localhost</server.backupAddress>
+        <server.backupPort>8090</server.backupPort>
     </properties>
+
 
     <dependencies>
         <dependency>
@@ -60,7 +64,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>pt.tecnico.rrrd.server.RrrdServerApp</mainClass>
+                    <mainClass>${server.mainClass}</mainClass>
                     <arguments>
                         <argument>${server.address}</argument>
                         <argument>${server.port}</argument>
@@ -69,5 +73,6 @@
             </plugin>
         </plugins>
     </build>
+
 
 </project>

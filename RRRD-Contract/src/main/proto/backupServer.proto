@@ -1,3 +1,34 @@
 syntax = "proto3";
+
+option java_multiple_files = true;
 package pt.tecnico.rrrd.contract;
 
+service BackupServer {
+  rpc Update (UpdateRequest) returns (UpdateResponse) {}
+  rpc Restore (RestoreRequest) returns (RestoreResponse) {}
+}
+
+message Document {
+  string documentId = 1;
+  bytes data = 2;
+  string signature = 3;
+}
+
+message UpdateRequest {
+  repeated Document documentList = 1;
+  string signature = 2;
+}
+
+message UpdateResponse {
+  string status = 1;
+  string signature = 2;
+}
+
+message RestoreRequest {
+  string signature = 1;
+}
+
+message RestoreResponse {
+  repeated Document documentList = 1;
+  string signature = 2;
+}

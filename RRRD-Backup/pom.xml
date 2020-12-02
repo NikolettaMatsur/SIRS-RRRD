@@ -3,17 +3,30 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>pt.tecnico.rrrd.A44</groupId>
-        <artifactId>SIRS-RRRD</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </parent>
+
     <artifactId>RRRD-Backup</artifactId>
     <packaging>jar</packaging>
     <name>${project.artifactId}</name>
     <version>1.0-SNAPSHOT</version>
 
+    <parent>
+        <groupId>pt.tecnico.rrrd.A44</groupId>
+        <artifactId>SIRS-RRRD</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <properties>
+        <server.address>localhost</server.address>
+        <server.port>8090</server.port>
+    </properties>
+
     <dependencies>
+        <dependency>
+            <groupId>pt.tecnico.rrrd.A44</groupId>
+            <artifactId>RRRD-Contract</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
         <dependency>
             <groupId>javax.persistence</groupId>
             <artifactId>javax.persistence-api</artifactId>
@@ -33,4 +46,29 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <mainClass>pt.tecnico.rrrd.backup.RrrdBackupApp</mainClass>
+                    <arguments>
+                        <argument>${server.address}</argument>
+                        <argument>${server.port}</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

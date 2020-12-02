@@ -1,35 +1,32 @@
-package pt.tecnico.rrrd.server;
+package pt.tecnico.rrrd.backup;
 
 import io.grpc.Server;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.rmi.server.ExportException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-public class RrrdServerApp {
+public class RrrdBackupApp {
 
     private final Server server;
     private final Logger logger;
-    static String address;
-    static int port;
 
-    public RrrdServerApp(String address, int port){
-        this.logger = Logger.getLogger(RrrdServerApp.class.getName());
+    public RrrdBackupApp(String address, int port){
+        this.logger = Logger.getLogger(RrrdBackupApp.class.getName());
         this.server = this.initialize(address, port);
     }
 
     public Server initialize(String address, int port){
         return NettyServerBuilder.forAddress(new InetSocketAddress(address, port))
-                .addService(new RrrdServerService())
+                .addService(new RrrdBackupService())
                 .build();
     }
 
     public void start() throws IOException {
         if (this.server != null) {
-            logger.info(String.format("Remote Server started at port %d", port));
+            logger.info("Backup Server started");
             this.server.start();
         }
     }
@@ -54,14 +51,15 @@ public class RrrdServerApp {
             return;
         }
 
-        address = args[0];
-        port = Integer.parseInt(args[1]);
+        final String address = args[0];
+        final int port = Integer.parseInt(args[1]);
 
-        RrrdServerApp serverApp = new RrrdServerApp(address, port);
+        RrrdBackupApp serverApp = new RrrdBackupApp(address, port);
 
         serverApp.start();
         serverApp.blockUntilShutdown();
 
     }
+
 
 }

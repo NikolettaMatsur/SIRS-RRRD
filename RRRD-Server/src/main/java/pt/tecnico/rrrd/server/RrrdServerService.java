@@ -5,25 +5,24 @@ import pt.tecnico.rrrd.contract.*;
 
 public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
-    public RrrdServerService(){
-    }
+    public RrrdServerService(){}
 
     @Override
     public void pull(PullRequest request, StreamObserver<PullResponse> responseObserver) {
         System.out.println("Received pull request.");
 
-        PullResponse response = PullResponse.newBuilder().setDocument("Doc 1").setDocumentKey("Key1").build();
+        PullResponse pullResponse = PullResponse.newBuilder().setDocument("Doc 1").setDocumentKey("Key1").build();
 
-        responseObserver.onNext(response);
+        responseObserver.onNext(pullResponse);
         responseObserver.onCompleted();
     }
 
     @Override
     public void push(PushRequest request, StreamObserver<PushResponse> responseObserver) {
 
-        PushResponse response = PushResponse.newBuilder().setMessage("OK").build();
+        PushResponse pushResponse = PushResponse.newBuilder().setMessage("OK").build();
 
-        responseObserver.onNext(response);
+        responseObserver.onNext(pushResponse);
         responseObserver.onCompleted();
     }
 }
