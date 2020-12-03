@@ -47,6 +47,12 @@ public class RrrdClientApp {
                 break;
             case "push":
                 command = new Push(args[3], args[4]);
+                break;
+            case "add_file":
+                command = new AddFile(args[3]);
+                break;
+            case "add_permission":
+                command = new AddPermission(args[3], args[4]);
         }
 
         command.accept(commandHandler);

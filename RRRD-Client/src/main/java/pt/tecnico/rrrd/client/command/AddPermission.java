@@ -1,21 +1,21 @@
 package pt.tecnico.rrrd.client.command;
 
-public class Pull implements ICommand {
+public class AddPermission implements ICommand {
 
     private String documentId;
-    private String outputPath;
+    private String username;
 
-    public Pull(String documentId, String outputPath) {
+    public AddPermission(String documentId, String username) {
         this.documentId = documentId;
-        this.outputPath = outputPath;
+        this.username = username;
     }
 
     public String getDocumentId() {
         return documentId;
     }
 
-    public String getOutputPath() {
-        return outputPath;
+    public String getUsername() {
+        return username;
     }
 
     @Override
