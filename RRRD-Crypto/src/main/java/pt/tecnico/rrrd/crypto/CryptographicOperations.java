@@ -4,6 +4,9 @@ import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.sql.Timestamp;
@@ -15,7 +18,7 @@ import java.util.NoSuchElementException;
 
 public class CryptographicOperations {
 
-    private static final String KEYSTORE_PATH = "/home/andre/Documents/SIRS/Project/SIRS-RRRD/RRRD-Crypto/src/main/resources/KeyStore.jks";
+    private static final String KEYSTORE_PATH = "/media/sf_SIRSCode/SIRS-RRRD/RRRD-Crypto/src/main/resources/KeyStore.jks";
     private static final String SYMMETRIC_ALGORITHM = "AES";
     private static int SYMMETRIC_KEY_SIZE = 256;
     private static final String ASYMMETRIC_ALGORITHM = "RSA";
@@ -114,6 +117,16 @@ public class CryptographicOperations {
         return transform(Cipher.DECRYPT_MODE, ASYMMETRIC_ALGORITHM, data, key);
     }
 
+    public static String getEncryptedDocument(String keyStorePassword, String keyAlias, String documentPassword, byte[] data) throws UnrecoverableKeyException,
+            CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, InvalidKeyException,
+            BadPaddingException, NoSuchPaddingException, IllegalBlockSizeException {
+
+        Key key = getDocumentKey(keyStorePassword, keyAlias, documentPassword);
+        byte[] encryptedDocument = symmetricEncrypt(data, key);
+
+        return Base64.getEncoder().encodeToString(encryptedDocument);
+    }
+
     public static byte[] sign(byte[] data, PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException,
             SignatureException {
 
@@ -122,6 +135,16 @@ public class CryptographicOperations {
         signature.update(data);
 
         return signature.sign();
+    }
+
+    public static String getSignature(String keyStorePassword, String keyAlias, String privateKeyPassword, byte[] data) throws UnrecoverableKeyException,
+            CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, SignatureException,
+            InvalidKeyException {
+
+        PrivateKey privateKey = getPrivateKey(keyStorePassword, keyAlias, privateKeyPassword);
+        byte[] signature = sign(data, privateKey);
+
+        return Base64.getEncoder().encodeToString(signature);
     }
 
     public static boolean verifySignature(PublicKey publicKey, byte[] message, byte[] signature)

@@ -37,3 +37,47 @@ message PushMessage {
 message PushResponse {
   string message = 1;
 }
+
+message AddFileRequest {
+  AddFileMessage message = 1;
+  string signature = 2;
+}
+
+message AddFileMessage {
+  string encryptedDocument = 1;
+  string ownerUsername = 2;
+  string timestamp = 3;
+}
+
+message AddFileResponse {
+  string message = 1;
+}
+
+message GetPubKeysRequest {
+  GetPubKeysMessage message = 1;
+  string signature = 2;
+}
+
+message GetPubKeysMessage {
+  string username = 1;
+  string timestamp = 2;
+}
+
+message GetPubKeysResponse {
+  repeated string pubKeys = 1;
+}
+
+message AddPermissionRequest {
+  AddPermissionMessage message = 1;
+  string signature = 2;
+}
+
+message AddPermissionMessage {
+  string documentId = 1;
+  repeated string pubKeys = 2;
+  string timestamp = 3;
+}
+
+message AddPermissionResponse {
+  string message = 1;
+}
