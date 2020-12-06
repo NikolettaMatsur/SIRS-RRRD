@@ -3,26 +3,53 @@ package pt.tecnico.rrrd.client;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import pt.tecnico.rrrd.client.command.*;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
+import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
+import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 
-import java.lang.reflect.Array;
+import javax.net.ssl.SSLException;
+import java.io.File;
+import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class RrrdClientApp {
 
-    private final RemoteServerBlockingStub blockingStub;
-    private final RemoteServerStub asyncStub;
+    private RemoteServerBlockingStub blockingStub;
+    private RemoteServerStub asyncStub;
+
+    private final String trustCertCollectionFilePath = "GRPC.crt";
+
+    public RrrdClientApp() {
+    }
 
     public RrrdClientApp(Channel channel) {
         this.blockingStub = RemoteServerGrpc.newBlockingStub(channel);
         this.asyncStub = RemoteServerGrpc.newStub(channel);
     }
 
-    public static void main(String[] args) throws Exception{
+    private SslContextBuilder getSslContextBuilder() throws URISyntaxException {
+        SslContextBuilder builder = GrpcSslContexts.forClient();
+        builder.trustManager(new File(getClass().getClassLoader().getResource(trustCertCollectionFilePath).toURI()));
+        return builder;
+    }
+
+
+    public ManagedChannel initialize(String address, int port) throws SSLException, URISyntaxException {
+        ManagedChannel channel = NettyChannelBuilder.forAddress(address, port).sslContext(getSslContextBuilder().build()).build();
+        this.blockingStub = RemoteServerGrpc.newBlockingStub(channel);
+        this.asyncStub = RemoteServerGrpc.newStub(channel);
+        return channel;
+    }
+
+
+    public static void main(String[] args) throws Exception {
 
         if (args.length < 2) {
             System.err.println("Argument(s) missing!");
@@ -34,10 +61,12 @@ public class RrrdClientApp {
         final int port = Integer.parseInt(args[1]);
         final String commandInput = args[2];
 
-        String target = address + ":" + port ;
+        String target = address + ":" + port;
 
-        ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-        RrrdClientApp client = new RrrdClientApp(channel);
+
+        RrrdClientApp client = new RrrdClientApp();
+        ManagedChannel channel = client.initialize(address, port);
+
 
         ICommandHandler commandHandler = new CommandHandler(client.blockingStub, client.asyncStub);
         ICommand command = null;
@@ -57,6 +86,8 @@ public class RrrdClientApp {
 
         command.accept(commandHandler);
 
-        channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+        channel.shutdownNow().
+
+                awaitTermination(5, TimeUnit.SECONDS);
     }
 }
