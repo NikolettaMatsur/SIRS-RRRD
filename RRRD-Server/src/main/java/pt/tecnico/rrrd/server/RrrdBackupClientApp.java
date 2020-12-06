@@ -3,12 +3,11 @@ package pt.tecnico.rrrd.server;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+
 import pt.tecnico.rrrd.contract.BackupServerGrpc;
 import pt.tecnico.rrrd.contract.BackupServerGrpc.BackupServerStub;
 import pt.tecnico.rrrd.contract.BackupServerGrpc.BackupServerBlockingStub;
 
-import java.awt.datatransfer.Transferable;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 
@@ -23,6 +22,7 @@ public class RrrdBackupClientApp {
         blockingStub = BackupServerGrpc.newBlockingStub(channel);
         asyncStub = BackupServerGrpc.newStub(channel);
     }
+
 
     public static void main(String[] args) throws Exception {
 
@@ -55,7 +55,7 @@ public class RrrdBackupClientApp {
             }
         });
 
-        while(true){
+        while (true) {
             Thread.sleep(updateInterval * 1000);
             clientAPI.update();
         }

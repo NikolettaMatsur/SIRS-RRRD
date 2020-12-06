@@ -48,6 +48,11 @@
             <version>1.4.200</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.28.0</version>
+        </dependency>
     </dependencies>
 
     <build>
