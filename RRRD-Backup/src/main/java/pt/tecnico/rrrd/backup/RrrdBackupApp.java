@@ -1,10 +1,16 @@
 package pt.tecnico.rrrd.backup;
 
 import io.grpc.Server;
+import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
+import io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth;
+import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 
+import javax.net.ssl.SSLException;
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -12,21 +18,28 @@ public class RrrdBackupApp {
 
     private final Server server;
     private final Logger logger;
+    static String address;
+    static int port;
+    private final String certChainFilePath = "backup.crt";
+    private final String privateKeyFilePath = "backup.key";
+    private final String trustCertCollectionFilePath = "ca.crt";
 
-    public RrrdBackupApp(String address, int port){
+
+    public RrrdBackupApp(String address, int port) throws URISyntaxException, SSLException {
         this.logger = Logger.getLogger(RrrdBackupApp.class.getName());
         this.server = this.initialize(address, port);
     }
 
-    public Server initialize(String address, int port){
+    public Server initialize(String address, int port) throws URISyntaxException, SSLException {
         return NettyServerBuilder.forAddress(new InetSocketAddress(address, port))
                 .addService(new RrrdBackupService())
+                .sslContext(getSslContextBuilder().build())
                 .build();
     }
 
     public void start() throws IOException {
         if (this.server != null) {
-            logger.info("Backup Server started");
+            logger.info(String.format("Remote Server started at port %d", port));
             this.server.start();
         }
     }
@@ -43,6 +56,16 @@ public class RrrdBackupApp {
         }
     }
 
+    private SslContextBuilder getSslContextBuilder() throws URISyntaxException {
+        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(getClass().getClassLoader().getResource(certChainFilePath).toURI()),
+                new File(getClass().getClassLoader().getResource(privateKeyFilePath).toURI()));
+
+        sslClientContextBuilder.trustManager(new File(getClass().getClassLoader().getResource(trustCertCollectionFilePath).toURI()));
+        sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
+        return GrpcSslContexts.configure(sslClientContextBuilder);
+    }
+
+
     public static void main(String[] args) throws Exception {
 
         if (args.length < 1) {
@@ -51,8 +74,8 @@ public class RrrdBackupApp {
             return;
         }
 
-        final String address = args[0];
-        final int port = Integer.parseInt(args[1]);
+        address = args[0];
+        port = Integer.parseInt(args[1]);
 
         RrrdBackupApp serverApp = new RrrdBackupApp(address, port);
 
