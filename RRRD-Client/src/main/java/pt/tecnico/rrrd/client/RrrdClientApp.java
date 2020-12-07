@@ -12,9 +12,11 @@ import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
+import java.lang.reflect.Array;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.Scanner;
 
 public class RrrdClientApp {
 
@@ -50,30 +52,51 @@ public class RrrdClientApp {
         System.out.println(Arrays.toString(args));
         final String address = args[0];
         final int port = Integer.parseInt(args[1]);
-        final String commandInput = args[2];
-
-        String target = address + ":" + port;
 
         RrrdClientApp client = new RrrdClientApp(address, port);
 
         ICommandHandler commandHandler = new CommandHandler(client.blockingStub, client.asyncStub);
-        ICommand command = null;
-        switch (commandInput) {
-            case "pull":
-                command = new Pull(args[3], args[4]); // TODO output path of the document, keystore passwords
-                break;
-            case "push":
-                command = new Push(args[3], args[4]);
-                break;
-            case "add_file":
-                command = new AddFile(args[3]);
-                break;
-            case "add_permission":
-                command = new AddPermission(args[3], args[4]);
-        }
 
-        command.accept(commandHandler);
+        processInput(commandHandler);
 
         client.channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+    }
+
+    private static void processInput(ICommandHandler commandHandler) {
+        Scanner input = new Scanner(System.in);
+        ICommand command = null;
+        String commandInput = null;
+        String commandName = null;
+        loop:
+        while (true) {
+            System.out.print(">");
+            commandInput = input.nextLine();
+            commandName = commandInput.split(" ")[0];
+            switch (commandName) {
+                case "pull":
+                    command = new Pull(commandInput); // TODO output path of the document, keystore passwords
+                    break;
+                case "push":
+                    command = new Push(commandInput);
+                    break;
+                case "add_file":
+                    command = new AddFile(commandInput);
+                    break;
+                case "add_permission":
+                    command = new AddPermission(commandInput);
+                    break;
+                case "quit":
+                case "q":
+                case "exit":
+                    break loop;
+                default:
+                    System.out.println("Command not recognized.");
+                    break;
+            }
+            if (command != null) {
+                command.accept(commandHandler);
+            }
+        }
+        input.close();
     }
 }
