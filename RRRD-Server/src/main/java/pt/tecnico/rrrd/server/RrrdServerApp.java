@@ -1,11 +1,13 @@
 package pt.tecnico.rrrd.server;
 
 import io.grpc.Server;
+import io.grpc.ServerBuilder;
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslProvider;
+import pt.tecnico.rrrd.contract.RemoteServerGrpc;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
@@ -29,12 +31,13 @@ public class  RrrdServerApp {
 
     public RrrdServerApp(String address, int port) throws SSLException, URISyntaxException {
         this.logger = Logger.getLogger(RrrdServerApp.class.getName());
-        this.certChainFilePath = "remote-server.crt";
-        this.privateKeyFilePath = "remote-server.key";
+        this.certChainFilePath = "remote.crt";
+        this.privateKeyFilePath = "remote.key";
         this.server = this.initialize(address, port);
     }
 
     public Server initialize(String address, int port) throws SSLException, URISyntaxException {
+
         return NettyServerBuilder.forAddress(new InetSocketAddress(address, port))
                 .addService(new RrrdServerService())
                 .sslContext(getSslContextBuilder().build())
@@ -78,7 +81,7 @@ public class  RrrdServerApp {
         SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(getClass().getClassLoader().getResource(certChainFilePath).toURI()),
                 new File(getClass().getClassLoader().getResource(privateKeyFilePath).toURI()));
 
-        return GrpcSslContexts.configure(sslClientContextBuilder, SslProvider.OPENSSL);
+        return GrpcSslContexts.configure(sslClientContextBuilder);
     }
 
     public static void main(String[] args) throws Exception {
