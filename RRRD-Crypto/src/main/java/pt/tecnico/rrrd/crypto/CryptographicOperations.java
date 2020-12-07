@@ -4,6 +4,8 @@ import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -18,7 +20,7 @@ import java.util.NoSuchElementException;
 
 public class CryptographicOperations {
 
-    private static final String KEYSTORE_PATH = "/media/sf_SIRSCode/SIRS-RRRD/RRRD-Crypto/src/main/resources/KeyStore.jks";
+    private static final String KEYSTORE_PATH = "KeyStore.jks";
     private static final String SYMMETRIC_ALGORITHM = "AES";
     private static int SYMMETRIC_KEY_SIZE = 256;
     private static final String ASYMMETRIC_ALGORITHM = "RSA";
@@ -30,7 +32,8 @@ public class CryptographicOperations {
             throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
 
         KeyStore keyStore = KeyStore.getInstance(java.security.KeyStore.getDefaultType());
-        keyStore.load(new FileInputStream(KEYSTORE_PATH), password.toCharArray());
+        InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(KEYSTORE_PATH);
+        keyStore.load(inputStream, password.toCharArray());
 
         return keyStore;
     }
