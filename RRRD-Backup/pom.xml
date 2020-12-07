@@ -17,7 +17,7 @@
 
     <properties>
         <server.address>localhost</server.address>
-        <server.port>8090</server.port>
+        <server.port>8080</server.port>
         <netty.tcnative.version>2.0.31.Final</netty.tcnative.version>
     </properties>
 

@@ -50,7 +50,7 @@
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty-tcnative-boringssl-static </artifactId>
+            <artifactId>netty-tcnative-boringssl-static</artifactId>
             <version>2.0.14.Final</version>
         </dependency>
     </dependencies>
@@ -79,5 +79,12 @@
         </plugins>
     </build>
 
-
+    <profiles>
+        <profile>
+            <id>backup-client</id>
+            <properties>
+                <server.mainClass>pt.tecnico.rrrd.server.RrrdBackupClientApp</server.mainClass>
+            </properties>
+        </profile>
+    </profiles>
 </project>

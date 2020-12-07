@@ -25,14 +25,11 @@ public class  RrrdServerApp {
     private final Logger logger;
     static String address;
     static int port;
-    private final String certChainFilePath;
-    private final String privateKeyFilePath;
-
+    private final String certChainFilePath = "remote.crt";
+    private final String privateKeyFilePath = "remote.key";
 
     public RrrdServerApp(String address, int port) throws SSLException, URISyntaxException {
         this.logger = Logger.getLogger(RrrdServerApp.class.getName());
-        this.certChainFilePath = "remote.crt";
-        this.privateKeyFilePath = "remote.key";
         this.server = this.initialize(address, port);
     }
 

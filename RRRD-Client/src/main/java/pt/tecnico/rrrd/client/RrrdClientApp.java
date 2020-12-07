@@ -22,13 +22,11 @@ public class RrrdClientApp {
     private RemoteServerStub asyncStub;
 
     private final String trustCertCollectionFilePath = "ca.crt";
+    private final ManagedChannel channel;
 
-    public RrrdClientApp() {
-    }
+    public RrrdClientApp(String address, int port) throws SSLException, URISyntaxException {
+        this.channel = this.initialize(address,port);
 
-    public RrrdClientApp(Channel channel) {
-        this.blockingStub = RemoteServerGrpc.newBlockingStub(channel);
-        this.asyncStub = RemoteServerGrpc.newStub(channel);
     }
 
     private SslContextBuilder getSslContextBuilder() throws URISyntaxException {
@@ -56,8 +54,7 @@ public class RrrdClientApp {
 
         String target = address + ":" + port;
 
-        RrrdClientApp client = new RrrdClientApp();
-        ManagedChannel channel = client.initialize(address, port);
+        RrrdClientApp client = new RrrdClientApp(address, port);
 
         ICommandHandler commandHandler = new CommandHandler(client.blockingStub, client.asyncStub);
         ICommand command = null;
@@ -77,6 +74,6 @@ public class RrrdClientApp {
 
         command.accept(commandHandler);
 
-        channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+        client.channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
     }
 }
