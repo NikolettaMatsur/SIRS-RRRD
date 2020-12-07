@@ -8,6 +8,7 @@ import pt.tecnico.rrrd.crypto.CryptographicOperations;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 
 public class CommandHandler implements ICommandHandler {
@@ -38,6 +39,8 @@ public class CommandHandler implements ICommandHandler {
             System.out.printf("Received response: Doc: %s; Key: %s;\n", pullResponse.getDocument(), pullResponse.getDocumentKey());
 
             // TODO decrypt document and write o File System
+        } catch (NoSuchFileException e) {
+            System.out.println("No such file: " + e.getFile());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -62,8 +65,10 @@ public class CommandHandler implements ICommandHandler {
             PushResponse pushResponse = this.blockingStub.push(pushRequest);
 
             System.out.printf("Received response: %s;\n", pushResponse.getMessage());
+        } catch (NoSuchFileException e) {
+            System.out.println("No such file: " + e.getFile());
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println(e.getClass() + ": " + e.getMessage());
         }
     }
 
@@ -85,6 +90,9 @@ public class CommandHandler implements ICommandHandler {
 
 //            AddFileResponse addFileResponse = this.blockingStub.push(addFileRequest);
 //            System.out.println("Received response: " + addFileResponse);
+
+        } catch (NoSuchFileException e) {
+            System.out.println("No such file: " + e.getFile());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
