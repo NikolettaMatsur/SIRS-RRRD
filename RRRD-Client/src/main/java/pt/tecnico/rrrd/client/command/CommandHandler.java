@@ -6,10 +6,15 @@ import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
 
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
+import java.util.Base64;
 
 public class CommandHandler implements ICommandHandler {
 
@@ -36,9 +41,14 @@ public class CommandHandler implements ICommandHandler {
 
             PullResponse pullResponse = this.blockingStub.pull(pullRequest);
 
-            System.out.printf("Received response: Doc: %s; Key: %s;\n", pullResponse.getDocument(), pullResponse.getDocumentKey());
+            byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
+                    CryptographicOperations.getPrivateKey("password", "asymmetric_keys", "password"));
 
-            // TODO decrypt document and write o File System
+            byte[] decryptedDocument = CryptographicOperations.symmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocument()),
+                    CryptographicOperations.convertToSymmetricKey(documentKeyBytes));
+
+            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(pull.getOutputPath()), StandardCharsets.UTF_8));
+            writer.write(new String(decryptedDocument));
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
         } catch (Exception e) {
@@ -49,7 +59,7 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(Push push) {
         try {
-            String documentData = Files.readString(Paths.get(push.getDocumentPath()), StandardCharsets.US_ASCII);
+            String documentData = Files.readString(Paths.get(push.getDocumentPath()), StandardCharsets.UTF_8);
 
             PushMessage pushMessage = PushMessage.newBuilder().
                     setDocumentId(push.getDocumentId()).

@@ -38,13 +38,17 @@ public class CryptographicOperations {
         return keyStore;
     }
 
+    public static Key convertToSymmetricKey(byte[] key) {
+        return new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
+    }
+
     public static Key getDocumentKey(String keyStorePassword, String documentId, String documentPassword)
-            throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, UnrecoverableKeyException { // TODO dose the client need to save the document key?
+            throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, UnrecoverableKeyException {
 
         return getKeyStore(keyStorePassword).getKey(documentId, documentPassword.toCharArray());
     }
 
-//    private static Key createDocumentKey(String documentId) { // TODO dose the client need to save the document key?
+//    private static Key createDocumentKey(String documentId) {
 //
 //    }
 
