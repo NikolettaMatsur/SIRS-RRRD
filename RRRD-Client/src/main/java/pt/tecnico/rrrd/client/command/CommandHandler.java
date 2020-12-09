@@ -1,5 +1,6 @@
 package pt.tecnico.rrrd.client.command;
 
+import pt.tecnico.rrrd.client.RrrdClientApp;
 import pt.tecnico.rrrd.client.utils.Utils;
 import pt.tecnico.rrrd.contract.*;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
@@ -7,10 +8,7 @@ import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
 
 import javax.crypto.SecretKey;
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -40,22 +38,24 @@ public class CommandHandler implements ICommandHandler {
 
             PullRequest pullRequest = PullRequest.newBuilder().
                     setMessage(pullMessage).
-                    setSignature(CryptographicOperations.getSignature("password", "asymmetric_keys", "password", pullMessage.toByteArray())).
+                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", pullMessage.toByteArray())).
                     build();
 
             PullResponse pullResponse = this.blockingStub.pull(pullRequest);
+            System.out.println(pullResponse);
 
             byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
-                    CryptographicOperations.getPrivateKey("password", "asymmetric_keys", "password"));
+                    CryptographicOperations.getPrivateKey(RrrdClientApp.keyStorePassword, "asymmetric_keys"));
 
             SecretKey secretKey = CryptographicOperations.convertToSymmetricKey(documentKeyBytes);
             byte[] decryptedDocument = CryptographicOperations.symmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocument()),
                     secretKey);
 
-            CryptographicOperations.storeDocumentKey("password", pull.getDocumentId(), secretKey);
+            CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, pull.getDocumentId(), secretKey);
 
-            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(pull.getOutputPath()), StandardCharsets.UTF_8));
-            writer.write(new String(decryptedDocument));
+            PrintWriter writer = new PrintWriter(pull.getOutputPath(), StandardCharsets.UTF_8);
+            writer.println(new String(decryptedDocument));
+            writer.close();
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
         } catch (Exception e) {
@@ -70,13 +70,13 @@ public class CommandHandler implements ICommandHandler {
 
             PushMessage pushMessage = PushMessage.newBuilder().
                     setDocumentId(push.getDocumentId()).
-                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument("password", push.getDocumentId(), documentData.getBytes())).
+                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, push.getDocumentId(), documentData.getBytes())).
                     setTimestamp(CryptographicOperations.getTimestamp()).
                     build();
 
             PushRequest pushRequest = PushRequest.newBuilder().
                     setMessage(pushMessage).
-                    setSignature(CryptographicOperations.getSignature("password", "asymmetric_keys", "password", pushMessage.toByteArray())).
+                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", pushMessage.toByteArray())).
                     build();
 
             PushResponse pushResponse = this.blockingStub.push(pushRequest);
@@ -104,10 +104,10 @@ public class CommandHandler implements ICommandHandler {
 
             AddFileRequest addFileRequest = AddFileRequest.newBuilder().
                     setMessage(addFileMessage).
-                    setSignature(CryptographicOperations.getSignature("password", "asymmetric_keys", "password", addFileMessage.toByteArray())).
+                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", addFileMessage.toByteArray())).
                     build();
 
-//            AddFileResponse addFileResponse = this.blockingStub.push(addFileRequest);
+//            AddFileResponse addFileResponse = this.blockingStub.push(addFileRequest); // TODO catch exception that is thrown when an incorrect documentId is specified
 //            System.out.println("Received response: " + addFileResponse);
 //
 //            CryptographicOperations.storeDocumentKey("password", addFile.getDocumentId(), secretKey);
@@ -134,7 +134,7 @@ public class CommandHandler implements ICommandHandler {
 
             AddPermissionRequest addPermissionRequest = AddPermissionRequest.newBuilder().
                     setMessage(addPermissionMessage).
-                    setSignature(CryptographicOperations.getSignature("password", "asymmetric_keys", "password", addPermissionMessage.toByteArray())).
+                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", addPermissionMessage.toByteArray())).
                     build();
             System.out.println(addPermissionRequest);
 //            AddPermissionResponse addPermissionResponse = this.blockingStub.push(addPermissionRequest);
@@ -154,7 +154,7 @@ public class CommandHandler implements ICommandHandler {
 
             GetPubKeysRequest getPubKeysRequest = GetPubKeysRequest.newBuilder().
                     setMessage(getPubKeysMessage).
-                    setSignature(CryptographicOperations.getSignature("password", "asymmetric_keys", "password", getPubKeysMessage.toByteArray())).
+                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", getPubKeysMessage.toByteArray())).
                     build();
 
             System.out.println(getPubKeysRequest);
@@ -172,5 +172,44 @@ public class CommandHandler implements ICommandHandler {
             System.out.println(e.getMessage());
         }
         return keys;
+    }
+
+    @Override
+    public boolean handle(Login login) {
+        try {
+            LoginCredentials loginCredentials = LoginCredentials.newBuilder().
+                    setUsername(login.getUsername()).
+                    setPassword(login.getPassword()).
+                    build();
+
+            String pubKey = Base64.getEncoder().encodeToString(CryptographicOperations.getPublicKey(RrrdClientApp.keyStorePassword, "asymmetric_keys").getEncoded());
+            LoginMessage loginMessage = LoginMessage.newBuilder().
+                    setCredentials(loginCredentials).
+                    setClientPubKey(pubKey).
+                    setTimestamp(CryptographicOperations.getTimestamp()).
+                    build();
+
+            LoginRequest loginRequest = LoginRequest.newBuilder().
+                    setMessage(loginMessage).
+                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", loginMessage.toByteArray())).
+                    build();
+
+//            LoginResponse loginResponse = this.blockingStub.push(loginRequest);
+
+            return true;
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public void handle(Logout logout) {
+        try {
+//            LogoutResponse logoutResponse = this.blockingStub.push(LogoutRequest.newBuilder().build());
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
     }
 }

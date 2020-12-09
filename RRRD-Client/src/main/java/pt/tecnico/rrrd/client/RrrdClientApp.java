@@ -9,7 +9,9 @@ import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
+import pt.tecnico.rrrd.crypto.CryptographicOperations;
 
+import javax.naming.AuthenticationException;
 import javax.net.ssl.SSLException;
 import java.io.File;
 import java.lang.reflect.Array;
@@ -25,6 +27,8 @@ public class RrrdClientApp {
 
     private final String trustCertCollectionFilePath = "ca.crt";
     private final ManagedChannel channel;
+
+    public static String keyStorePassword;
 
     public RrrdClientApp(String address, int port) throws SSLException, URISyntaxException {
         this.channel = this.initialize(address,port);
@@ -62,41 +66,85 @@ public class RrrdClientApp {
         client.channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
     }
 
+    private static void login(ICommandHandler commandHandler, Scanner input) throws AuthenticationException {
+        System.out.println("Insert your credentials");
+
+        System.out.print("Username: ");
+        String username = input.nextLine();
+
+        System.out.print("Password: ");
+        String password = new String(System.console().readPassword());
+
+        System.out.print("KeyStore Password: ");
+        keyStorePassword = new String(System.console().readPassword());
+
+        Login login = new Login(username, password);
+        login.accept(commandHandler);
+
+        if (!login.isLoggedIn()) {
+            throw new AuthenticationException("\nIncorrect username or password!");
+        }
+
+        if (!correctKeyStorePassword(keyStorePassword)) {
+            throw new AuthenticationException("\nIncorrect keyStore password!");
+        }
+
+        System.out.println("\nSuccessfully logged in!\n");
+    }
+
+    private static boolean correctKeyStorePassword(String keyStorePassword) {
+        try {
+            CryptographicOperations.getKeyStore(keyStorePassword);
+
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private static void processInput(ICommandHandler commandHandler) {
         Scanner input = new Scanner(System.in);
         ICommand command = null;
         String commandInput = null;
         String commandName = null;
-        loop:
-        while (true) {
-            System.out.print(">");
-            commandInput = input.nextLine();
-            commandName = commandInput.split(" ")[0];
-            switch (commandName) {
-                case "pull":
-                    command = new Pull(commandInput); // TODO output path of the document, keystore passwords
-                    break;
-                case "push":
-                    command = new Push(commandInput);
-                    break;
-                case "add_file":
-                    command = new AddFile(commandInput);
-                    break;
-                case "add_permission":
-                    command = new AddPermission(commandInput);
-                    break;
-                case "quit":
-                case "q":
-                case "exit":
-                    break loop;
-                default:
-                    System.out.println("Command not recognized.");
-                    break;
+
+        try {
+            login(commandHandler, input);
+
+            loop:
+            while (true) {
+                System.out.print("> ");
+                commandInput = input.nextLine();
+                commandName = commandInput.split(" ")[0];
+                switch (commandName) {
+                    case "pull":
+                        command = new Pull(commandInput);
+                        break;
+                    case "push":
+                        command = new Push(commandInput);
+                        break;
+                    case "add_file":
+                        command = new AddFile(commandInput);
+                        break;
+                    case "add_permission":
+                        command = new AddPermission(commandInput);
+                        break;
+                    case "quit":
+                    case "q":
+                    case "exit":
+                        break loop;
+                    default:
+                        System.out.println("Command not recognized.");
+                        break;
+                }
+                if (command != null) {
+                    command.accept(commandHandler);
+                }
             }
-            if (command != null) {
-                command.accept(commandHandler);
-            }
+        } catch (AuthenticationException e) {
+            System.err.println(e.getMessage());
         }
+
         input.close();
     }
 }

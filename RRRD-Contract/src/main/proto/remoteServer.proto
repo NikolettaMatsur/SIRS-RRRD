@@ -82,3 +82,31 @@ message AddPermissionMessage {
 message AddPermissionResponse {
   string message = 1;
 }
+
+message LoginRequest {
+  LoginMessage message = 1;
+  string signature = 2;
+}
+
+message LoginMessage {
+  LoginCredentials credentials = 1;
+  string clientPubKey = 2;
+  string timestamp = 3;
+}
+
+message LoginCredentials {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+
+}
+
+message LogoutRequest {
+
+}
+
+message LogoutResponse {
+
+}
