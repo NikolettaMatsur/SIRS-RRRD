@@ -51,7 +51,7 @@ message AddFileMessage {
 }
 
 message AddFileResponse {
-  bool ok = 1;
+  string message = 1;
 }
 
 message GetPubKeysRequest {

@@ -110,9 +110,7 @@ public class CommandHandler implements ICommandHandler {
 //            AddFileResponse addFileResponse = this.blockingStub.push(addFileRequest);
 //            System.out.println("Received response: " + addFileResponse);
 //
-//            if (addFileResponse.getOk()) {
-//                CryptographicOperations.storeDocumentKey("password", addFile.getDocumentId(), secretKey);
-//            }
+//            CryptographicOperations.storeDocumentKey("password", addFile.getDocumentId(), secretKey);
 
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
