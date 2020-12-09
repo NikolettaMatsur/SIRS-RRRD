@@ -2,15 +2,13 @@ package pt.tecnico.rrrd.crypto;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.*;
 import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -38,19 +36,33 @@ public class CryptographicOperations {
         return keyStore;
     }
 
-    public static Key convertToSymmetricKey(byte[] key) {
+    public static SecretKey convertToSymmetricKey(byte[] key) {
         return new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
     }
 
-    public static Key getDocumentKey(String keyStorePassword, String documentId, String documentPassword)
-            throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, UnrecoverableKeyException {
-
-        return getKeyStore(keyStorePassword).getKey(documentId, documentPassword.toCharArray());
+    public static PublicKey convertToPublicKey(byte[] key) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        return KeyFactory.getInstance(ASYMMETRIC_ALGORITHM).generatePublic(new X509EncodedKeySpec(key));
     }
 
-//    private static Key createDocumentKey(String documentId) {
-//
-//    }
+    public static Key getDocumentKey(String keyStorePassword, String documentId)
+            throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, UnrecoverableKeyException {
+
+        return getKeyStore(keyStorePassword).getKey(documentId, keyStorePassword.toCharArray());
+    }
+
+    public static void storeDocumentKey(String keyStorePassword, String documentId, SecretKey key) throws CertificateException,
+            NoSuchAlgorithmException, KeyStoreException, IOException {
+
+        KeyStore.SecretKeyEntry secret = new KeyStore.SecretKeyEntry(key);
+        KeyStore.ProtectionParameter password = new KeyStore.PasswordProtection("".toCharArray());
+        KeyStore keyStore = getKeyStore(keyStorePassword);
+
+        keyStore.setEntry(documentId, secret, password);
+
+        FileOutputStream out = new FileOutputStream(KEYSTORE_PATH);
+        keyStore.store(out, keyStorePassword.toCharArray());
+        out.close();
+    }
 
     public static SecretKey createDocumentKey() throws NoSuchAlgorithmException {
         KeyGenerator keyGenerator = KeyGenerator.getInstance(SYMMETRIC_ALGORITHM);
@@ -124,11 +136,11 @@ public class CryptographicOperations {
         return transform(Cipher.DECRYPT_MODE, ASYMMETRIC_ALGORITHM, data, key);
     }
 
-    public static String getEncryptedDocument(String keyStorePassword, String keyAlias, String documentPassword, byte[] data) throws UnrecoverableKeyException,
+    public static String getEncryptedDocument(String keyStorePassword, String documentId, byte[] data) throws UnrecoverableKeyException,
             CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, InvalidKeyException,
             BadPaddingException, NoSuchPaddingException, IllegalBlockSizeException {
 
-        Key key = getDocumentKey(keyStorePassword, keyAlias, documentPassword);
+        Key key = getDocumentKey(keyStorePassword, documentId);
         byte[] encryptedDocument = symmetricEncrypt(data, key);
 
         return Base64.getEncoder().encodeToString(encryptedDocument);

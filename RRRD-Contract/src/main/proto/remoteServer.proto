@@ -44,13 +44,14 @@ message AddFileRequest {
 }
 
 message AddFileMessage {
-  string encryptedDocument = 1;
-  string ownerUsername = 2;
-  string timestamp = 3;
+  string documentId = 1;
+  string encryptedDocument = 2;
+  string ownerUsername = 3;
+  string timestamp = 4;
 }
 
 message AddFileResponse {
-  string message = 1;
+  bool ok = 1;
 }
 
 message GetPubKeysRequest {

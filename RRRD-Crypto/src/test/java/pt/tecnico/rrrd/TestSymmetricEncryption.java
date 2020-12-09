@@ -14,7 +14,7 @@ public class TestSymmetricEncryption {
         String stringToEncrypt = "Hello World!";
 
         try {
-            Key key = CryptographicOperations.getDocumentKey("password", "symmetric_key", "password");
+            Key key = CryptographicOperations.getDocumentKey("password", "symmetric_key");
             byte[] encryptedBytes = CryptographicOperations.symmetricEncrypt(stringToEncrypt.getBytes(), key);
             byte[] decryptedBytes = CryptographicOperations.symmetricDecrypt(encryptedBytes, key);
             String decryptedString = new String(decryptedBytes);

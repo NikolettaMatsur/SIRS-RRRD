@@ -6,6 +6,7 @@ import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
 
+import javax.crypto.SecretKey;
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
@@ -14,7 +15,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
+import java.security.Key;
 import java.util.Base64;
+import java.util.LinkedList;
+import java.util.List;
 
 public class CommandHandler implements ICommandHandler {
 
@@ -44,8 +48,11 @@ public class CommandHandler implements ICommandHandler {
             byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
                     CryptographicOperations.getPrivateKey("password", "asymmetric_keys", "password"));
 
+            SecretKey secretKey = CryptographicOperations.convertToSymmetricKey(documentKeyBytes);
             byte[] decryptedDocument = CryptographicOperations.symmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocument()),
-                    CryptographicOperations.convertToSymmetricKey(documentKeyBytes));
+                    secretKey);
+
+            CryptographicOperations.storeDocumentKey("password", pull.getDocumentId(), secretKey);
 
             Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(pull.getOutputPath()), StandardCharsets.UTF_8));
             writer.write(new String(decryptedDocument));
@@ -63,7 +70,7 @@ public class CommandHandler implements ICommandHandler {
 
             PushMessage pushMessage = PushMessage.newBuilder().
                     setDocumentId(push.getDocumentId()).
-                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument("password", "symmetric_key", "password", documentData.getBytes())).
+                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument("password", push.getDocumentId(), documentData.getBytes())).
                     setTimestamp(CryptographicOperations.getTimestamp()).
                     build();
 
@@ -87,8 +94,10 @@ public class CommandHandler implements ICommandHandler {
         try {
             String documentData = Files.readString(Paths.get(addFile.getDocumentPath()), StandardCharsets.US_ASCII);
 
+            SecretKey secretKey = CryptographicOperations.createDocumentKey();
             AddFileMessage addFileMessage = AddFileMessage.newBuilder().
-                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument("password", "symmetric_key", "password", documentData.getBytes())).
+                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument("password", "symmetric_key", documentData.getBytes())).
+                    setDocumentId(addFile.getDocumentId()).
                     setOwnerUsername(Utils.getUserName()).
                     setTimestamp(CryptographicOperations.getTimestamp()).
                     build();
@@ -100,6 +109,10 @@ public class CommandHandler implements ICommandHandler {
 
 //            AddFileResponse addFileResponse = this.blockingStub.push(addFileRequest);
 //            System.out.println("Received response: " + addFileResponse);
+//
+//            if (addFileResponse.getOk()) {
+//                CryptographicOperations.storeDocumentKey("password", addFile.getDocumentId(), secretKey);
+//            }
 
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
@@ -111,15 +124,15 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(AddPermission addPermission) {
         try {
-            getPubKeys(addPermission.getUsername());
-
-            AddPermissionMessage addPermissionMessage = AddPermissionMessage.newBuilder().
+            AddPermissionMessage.Builder builder = AddPermissionMessage.newBuilder().
                     setDocumentId(addPermission.getDocumentId()).
-                    addPubKeys("1").
-                    addPubKeys("2").
-                    addPubKeys("3").
-                    setTimestamp(CryptographicOperations.getTimestamp()).
-                    build();
+                    setTimestamp(CryptographicOperations.getTimestamp());
+
+            for (String encryptedKey : getPubKeys(addPermission.getUsername(), addPermission.getDocumentId())) {
+                builder.addPubKeys(encryptedKey);
+            }
+
+            AddPermissionMessage addPermissionMessage = builder.build();
 
             AddPermissionRequest addPermissionRequest = AddPermissionRequest.newBuilder().
                     setMessage(addPermissionMessage).
@@ -133,7 +146,8 @@ public class CommandHandler implements ICommandHandler {
         }
     }
 
-    private void getPubKeys(String username) {
+    private List<String> getPubKeys(String username, String documentId) {
+        List<String> keys = new LinkedList<>();
         try {
             GetPubKeysMessage getPubKeysMessage = GetPubKeysMessage.newBuilder().
                     setUsername(username).
@@ -149,10 +163,16 @@ public class CommandHandler implements ICommandHandler {
 
 //            GetPubKeysResponse getPubKeysResponse = this.blockingStub.push(getPubKeysRequest);
 //            System.out.println("Received response: " + getPubKeysResponse);
-
-            // TODO Encrypt document key with the received public keys
+//
+//            Key documentKey = CryptographicOperations.getDocumentKey("password", documentId);
+//            for (String pubKey : getPubKeysResponse.getPubKeysList()) {
+//                byte[] encryptedKey = CryptographicOperations.asymmetricEncrypt(documentKey.getEncoded(),
+//                        CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(pubKey)));
+//                keys.add(Base64.getEncoder().encodeToString(encryptedKey));
+//            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+        return keys;
     }
 }
