@@ -104,7 +104,7 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(AddFile addFile) {
         try {
-            String documentData = Files.readString(Paths.get(addFile.getDocumentPath()), StandardCharsets.US_ASCII);
+            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + addFile.getDocumentId() + ".txt"), StandardCharsets.US_ASCII);
 
             SecretKey secretKey = CryptographicOperations.createDocumentKey();
             AddFileMessage addFileMessage = AddFileMessage.newBuilder().
@@ -119,13 +119,17 @@ public class CommandHandler implements ICommandHandler {
                     setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", addFileMessage.toByteArray())).
                     build();
 
-//            AddFileResponse addFileResponse = this.blockingStub.push(addFileRequest); // TODO catch exception that is thrown when an incorrect documentId is specified
-//            System.out.println("Received response: " + addFileResponse);
-//
-//            CryptographicOperations.storeDocumentKey("password", addFile.getDocumentId(), secretKey);
+            AddFileResponse addFileResponse = this.blockingStub.addNewFile(addFileRequest); // TODO catch exception that is thrown when an incorrect documentId is specified
+            System.out.println("Received response: " + addFileResponse);
+
+            CryptographicOperations.storeDocumentKey("password", addFile.getDocumentId(), secretKey);
 
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
+                System.err.println(e.getMessage());
+            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
