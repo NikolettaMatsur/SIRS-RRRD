@@ -77,9 +77,7 @@ public class RrrdClientApp {
 
         System.out.print("Password: ");
         String password = new String(System.console().readPassword());
-
-        System.out.print("KeyStore Password: ");
-        keyStorePassword = new String(System.console().readPassword());
+        keyStorePassword = password;
 
         Login login = new Login(username, password);
         login.accept(commandHandler);
