@@ -23,6 +23,7 @@ public class RrrdBackupApp {
     private final String certChainFilePath = "backup.crt";
     private final String privateKeyFilePath = "backup.key";
     private final String trustCertCollectionFilePath = "ca.crt";
+    private static String keyStorePassword = "password";
 
 
     public RrrdBackupApp(String address, int port) throws URISyntaxException, SSLException {
@@ -32,14 +33,14 @@ public class RrrdBackupApp {
 
     public Server initialize(String address, int port) throws URISyntaxException, SSLException {
         return NettyServerBuilder.forAddress(new InetSocketAddress(address, port))
-                .addService(new RrrdBackupService())
+                .addService(new RrrdBackupService(this.keyStorePassword))
                 .sslContext(getSslContextBuilder().build())
                 .build();
     }
 
     public void start() throws IOException {
         if (this.server != null) {
-            logger.info(String.format("Remote Server started at port %d", port));
+            logger.info(String.format("Backup Server started at port %d", port));
             this.server.start();
         }
     }

@@ -42,7 +42,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(pushMessage.getTimestamp());
             if (!verifySig || !verifyTimestamp) {
                 String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
-                logger.info(message + " Aborting operation.");
+                logger.severe(message + " Aborting operation.");
                 PushResponse pushResponse = PushResponse.newBuilder().setMessage(message).build();
                 responseObserver.onNext(pushResponse);
                 responseObserver.onCompleted();
