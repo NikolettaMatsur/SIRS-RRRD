@@ -15,7 +15,7 @@ public class TestSignature {
         String stringToEncrypt = "Hello World!";
 
         try {
-            PrivateKey privateKey = CryptographicOperations.getPrivateKey("password", "asymmetric_keys", "password");
+            PrivateKey privateKey = CryptographicOperations.getPrivateKey("password", "asymmetric_keys");
             byte[] signature = CryptographicOperations.sign(stringToEncrypt.getBytes(), privateKey);
             PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys");
             boolean valid = CryptographicOperations.verifySignature(publicKey, stringToEncrypt.getBytes(), signature);

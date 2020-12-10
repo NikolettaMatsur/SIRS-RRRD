@@ -16,7 +16,7 @@ public class TestAymmetricEncryption {
         String stringToEncrypt = "Hello World!";
 
         try {
-            PrivateKey privateKey = CryptographicOperations.getPrivateKey("password", "asymmetric_keys", "password");
+            PrivateKey privateKey = CryptographicOperations.getPrivateKey("password", "asymmetric_keys");
             byte[] encryptedBytes = CryptographicOperations.asymmetricEncrypt(stringToEncrypt.getBytes(), privateKey);
             PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys");
             byte[] decryptedBytes = CryptographicOperations.asymmetricDecrypt(encryptedBytes, publicKey);
@@ -35,7 +35,7 @@ public class TestAymmetricEncryption {
         try {
             PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys");
             byte[] encryptedBytes = CryptographicOperations.asymmetricEncrypt(stringToEncrypt.getBytes(), publicKey);
-            PrivateKey privateKey = CryptographicOperations.getPrivateKey("password", "asymmetric_keys", "password");
+            PrivateKey privateKey = CryptographicOperations.getPrivateKey("password", "asymmetric_keys");
             byte[] decryptedBytes = CryptographicOperations.asymmetricDecrypt(encryptedBytes, privateKey);
             String decryptedString = new String(decryptedBytes);
 

@@ -9,4 +9,8 @@ public interface ICommandHandler {
     void handle(AddFile addFile);
 
     void handle(AddPermission addPermission);
+
+    boolean handle(Login login);
+
+    void handle(Logout logout);
 }

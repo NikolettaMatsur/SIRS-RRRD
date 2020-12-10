@@ -26,7 +26,7 @@ public class CryptographicOperations {
     private static final String SIGN_ALGORITHM = "SHA256withRSA";
     public static long FRESHNESS_MAX_INTERVAL = 1000;
 
-    private static KeyStore getKeyStore(String password)
+    public static KeyStore getKeyStore(String password)
             throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
 
         KeyStore keyStore = KeyStore.getInstance(java.security.KeyStore.getDefaultType());
@@ -54,7 +54,7 @@ public class CryptographicOperations {
             NoSuchAlgorithmException, KeyStoreException, IOException {
 
         KeyStore.SecretKeyEntry secret = new KeyStore.SecretKeyEntry(key);
-        KeyStore.ProtectionParameter password = new KeyStore.PasswordProtection("".toCharArray());
+        KeyStore.ProtectionParameter password = new KeyStore.PasswordProtection(keyStorePassword.toCharArray());
         KeyStore keyStore = getKeyStore(keyStorePassword);
 
         keyStore.setEntry(documentId, secret, password);
@@ -71,11 +71,11 @@ public class CryptographicOperations {
         return keyGenerator.generateKey();
     }
 
-    public static PrivateKey getPrivateKey(String keyStorePassword, String keyAlias, String privateKeyPassword)
+    public static PrivateKey getPrivateKey(String keyStorePassword, String keyAlias)
             throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException,
             UnrecoverableKeyException {
 
-        Key key = getKeyStore(keyStorePassword).getKey(keyAlias, privateKeyPassword.toCharArray());
+        Key key = getKeyStore(keyStorePassword).getKey(keyAlias, keyStorePassword.toCharArray());
 
         if (key instanceof PrivateKey) {
             return (PrivateKey) key;
@@ -156,11 +156,11 @@ public class CryptographicOperations {
         return signature.sign();
     }
 
-    public static String getSignature(String keyStorePassword, String keyAlias, String privateKeyPassword, byte[] data) throws UnrecoverableKeyException,
+    public static String getSignature(String keyStorePassword, String keyAlias, byte[] data) throws UnrecoverableKeyException,
             CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException, SignatureException,
             InvalidKeyException {
 
-        PrivateKey privateKey = getPrivateKey(keyStorePassword, keyAlias, privateKeyPassword);
+        PrivateKey privateKey = getPrivateKey(keyStorePassword, keyAlias);
         byte[] signature = sign(data, privateKey);
 
         return Base64.getEncoder().encodeToString(signature);
