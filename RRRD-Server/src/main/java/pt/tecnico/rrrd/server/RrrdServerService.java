@@ -14,6 +14,8 @@ import java.nio.file.Paths;
 import java.security.InvalidParameterException;
 import java.security.PublicKey;
 import java.util.Base64;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
@@ -73,7 +75,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
             logger.info(String.format("Received Push Request: {Document Id: %s, Timestamp: %s}\n", pushMessage.getDocumentId(), pushMessage.getTimestamp()));
 
-            publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys");
+            publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, pushMessage.toByteArray(), signature);
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(pushMessage.getTimestamp());
             if (!verifySig || !verifyTimestamp) {
@@ -114,9 +116,9 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             boolean fileExits = new File(Utils.getFileRepository(request.getMessage().getDocumentId())).isFile();
 
             if (verifySig && verifyTimestamp && !fileExits) {
-                // TODO add username to db and associate as the owner
-
                 logger.info(String.format("Signature and Timestamp verified. Writing new file: %s", Utils.getFileRepository(request.getMessage().getDocumentId())));
+
+                // TODO add username to db and associate as the owner
 
                 PrintWriter writer = new PrintWriter(Utils.getFileRepository(request.getMessage().getDocumentId()), StandardCharsets.UTF_8);
                 writer.println(request.getMessage().getEncryptedDocument());
@@ -130,6 +132,42 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 responseObserver.onCompleted();
             } else {
                 String message = !verifySig ? "Invalid Signature." : fileExits ? "File Already Exists" : "Invalid TimeStamp.";
+                logger.info(message + " Aborting operation.");
+
+                throw new InvalidParameterException(message);
+            }
+
+        } catch (Exception e) {
+            responseObserver.onError(Status.DATA_LOSS
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void getPubKeys(GetPubKeysRequest request, StreamObserver<GetPubKeysResponse> responseObserver) {
+        try {
+            logger.info(String.format("Received GetPubKeys Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getUsername(), request.getMessage().getTimestamp()));
+
+            // Verify signature and ts
+            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
+
+            if (verifySig && verifyTimestamp) {
+                logger.info("Signature and Timestamp verified.");
+
+                // TODO get all public keys from request.getMessage().getUsername()
+                List<String> pubKeys = new LinkedList<>();
+
+                GetPubKeysResponse getPubKeysResponse = GetPubKeysResponse.newBuilder().
+                        addAllPubKeys(pubKeys).
+                        build();
+
+                responseObserver.onNext(getPubKeysResponse);
+                responseObserver.onCompleted();
+            } else {
+                String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
                 logger.info(message + " Aborting operation.");
 
                 throw new InvalidParameterException(message);
