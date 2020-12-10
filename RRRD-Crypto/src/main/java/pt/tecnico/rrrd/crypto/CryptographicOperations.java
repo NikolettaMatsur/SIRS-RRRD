@@ -2,9 +2,9 @@ package pt.tecnico.rrrd.crypto;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
@@ -30,8 +30,7 @@ public class CryptographicOperations {
             throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
 
         KeyStore keyStore = KeyStore.getInstance(java.security.KeyStore.getDefaultType());
-        InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(KEYSTORE_PATH);
-        keyStore.load(inputStream, password.toCharArray());
+        keyStore.load(new FileInputStream(KEYSTORE_PATH), password.toCharArray());
 
         return keyStore;
     }

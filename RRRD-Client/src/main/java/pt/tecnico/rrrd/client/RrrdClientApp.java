@@ -19,11 +19,13 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 public class RrrdClientApp {
 
     private RemoteServerBlockingStub blockingStub;
     private RemoteServerStub asyncStub;
+    private final Logger logger;
 
     private final String trustCertCollectionFilePath = "ca.crt";
     private final ManagedChannel channel;
@@ -31,6 +33,7 @@ public class RrrdClientApp {
     public static String keyStorePassword;
 
     public RrrdClientApp(String address, int port) throws SSLException, URISyntaxException {
+        this.logger = Logger.getLogger(RrrdClientApp.class.getName());
         this.channel = this.initialize(address,port);
 
     }

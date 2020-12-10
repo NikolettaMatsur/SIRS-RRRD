@@ -17,13 +17,16 @@ import java.security.Key;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class CommandHandler implements ICommandHandler {
 
     private final RemoteServerBlockingStub blockingStub;
     private final RemoteServerStub asyncStub;
+    private final Logger logger;
 
     public CommandHandler(RemoteServerBlockingStub blockingStub, RemoteServerStub asyncStub) {
+        this.logger = Logger.getLogger(CommandHandler.class.getName());
         this.blockingStub = blockingStub;
         this.asyncStub = asyncStub;
     }
@@ -66,6 +69,7 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(Push push) {
         try {
+
             String documentData = Files.readString(Paths.get(push.getDocumentPath()), StandardCharsets.UTF_8);
 
             PushMessage pushMessage = PushMessage.newBuilder().
@@ -79,13 +83,15 @@ public class CommandHandler implements ICommandHandler {
                     setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", pushMessage.toByteArray())).
                     build();
 
+            logger.info(String.format("Sending Push Request: {Document Id: %s, Timestamp: %s}\n", pushMessage.getDocumentId(), pushMessage.getTimestamp()));
+
             PushResponse pushResponse = this.blockingStub.push(pushRequest);
 
-            System.out.printf("Received response: %s;\n", pushResponse.getMessage());
+            logger.info(String.format("Received Push Response: {Message: %s}\n", pushResponse.getMessage()));
         } catch (NoSuchFileException e) {
-            System.out.println("No such file: " + e.getFile());
+            logger.severe("No such file: " + e.getFile());
         } catch (Exception e) {
-            System.out.println(e.getClass() + ": " + e.getMessage());
+            logger.severe(e.getClass() + ": " + e.getMessage());
         }
     }
 
