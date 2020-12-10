@@ -6,6 +6,7 @@ package pt.tecnico.rrrd.contract;
 service RemoteServer {
   rpc Pull (PullRequest) returns (PullResponse) {}
   rpc Push (PushRequest) returns (PushResponse) {}
+  rpc AddNewFile (AddFileRequest) returns (AddFileResponse) {}
 }
 
 message PullRequest {

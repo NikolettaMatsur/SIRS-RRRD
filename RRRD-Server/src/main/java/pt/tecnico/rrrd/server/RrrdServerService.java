@@ -6,6 +6,7 @@ import pt.tecnico.rrrd.contract.*;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
 import pt.tecnico.rrrd.server.utils.Utils;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -35,9 +36,11 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             // TODO verify user permissions
 
             if (verifySig && verifyTimestamp) {
+                logger.info(String.format("Signature and Timestamp verified. Returning encrypted file: %s", Utils.getFileRepository(request.getMessage().getDocumentId())));
+
                 String key = ""; // TODO get file key encrypted with users public key
 
-                String encryptedDocumentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/server/" + request.getMessage().getDocumentId()), StandardCharsets.UTF_8);
+                String encryptedDocumentData = Files.readString(Paths.get(Utils.getFileRepository(request.getMessage().getDocumentId())), StandardCharsets.UTF_8);
 
                 PullResponse pullResponse = PullResponse.newBuilder().
                         setDocument(encryptedDocumentData.trim()).
@@ -80,9 +83,9 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 responseObserver.onNext(pushResponse);
                 responseObserver.onCompleted();
             } else {
-                logger.info(String.format("Signature and Timestamp verified. Writing encrypted file: sync/%s", pushMessage.getDocumentId()));
+                logger.info(String.format("Signature and Timestamp verified. Writing encrypted file: %s", Utils.getFileRepository(pushMessage.getDocumentId())));
 
-                PrintWriter writer = new PrintWriter("/home/" + Utils.getUserName() + "/sync/server/" + pushMessage.getDocumentId(), StandardCharsets.UTF_8);
+                PrintWriter writer = new PrintWriter(Utils.getFileRepository(pushMessage.getDocumentId()), StandardCharsets.UTF_8);
                 writer.println(pushMessage.getEncryptedDocument());
                 writer.close();
 
@@ -99,5 +102,43 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
         }
     }
 
+    @Override
+    public void addNewFile(AddFileRequest request, StreamObserver<AddFileResponse> responseObserver) {
+        try {
+            logger.info(String.format("Received AddNewFile Request: {Document Id: %s, Timestamp: %s}\n", request.getMessage().getDocumentId(), request.getMessage().getTimestamp()));
 
+            // Verify signature and ts
+            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
+            boolean fileExits = new File(Utils.getFileRepository(request.getMessage().getDocumentId())).isFile();
+
+            if (verifySig && verifyTimestamp && !fileExits) {
+                // TODO add username to db and associate as the owner
+
+                logger.info(String.format("Signature and Timestamp verified. Writing new file: %s", Utils.getFileRepository(request.getMessage().getDocumentId())));
+
+                PrintWriter writer = new PrintWriter(Utils.getFileRepository(request.getMessage().getDocumentId()), StandardCharsets.UTF_8);
+                writer.println(request.getMessage().getEncryptedDocument());
+                writer.close();
+
+                AddFileResponse addFileResponse = AddFileResponse.newBuilder().
+                        setMessage("OK").
+                        build();
+
+                responseObserver.onNext(addFileResponse);
+                responseObserver.onCompleted();
+            } else {
+                String message = !verifySig ? "Invalid Signature." : fileExits ? "File Already Exists" : "Invalid TimeStamp.";
+                logger.info(message + " Aborting operation.");
+
+                throw new InvalidParameterException(message);
+            }
+
+        } catch (Exception e) {
+            responseObserver.onError(Status.DATA_LOSS
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        }
+    }
 }
