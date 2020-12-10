@@ -24,7 +24,7 @@ public class CryptographicOperations {
     private static final String ASYMMETRIC_ALGORITHM = "RSA";
     private static int ASYMMETRIC_KEY_SIZE = 2048;
     private static final String SIGN_ALGORITHM = "SHA256withRSA";
-    public static long FRESHNESS_MAX_INTERVAL = 1000;
+    public static long FRESHNESS_MAX_INTERVAL = 5000;
 
     public static KeyStore getKeyStore(String password)
             throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
