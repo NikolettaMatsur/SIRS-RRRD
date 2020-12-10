@@ -7,6 +7,7 @@ service RemoteServer {
   rpc Pull (PullRequest) returns (PullResponse) {}
   rpc Push (PushRequest) returns (PushResponse) {}
   rpc AddNewFile (AddFileRequest) returns (AddFileResponse) {}
+  rpc GetPubKeys (GetPubKeysRequest) returns (GetPubKeysResponse) {}
 }
 
 message PullRequest {
