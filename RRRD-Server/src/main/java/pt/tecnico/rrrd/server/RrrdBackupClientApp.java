@@ -1,20 +1,17 @@
 package pt.tecnico.rrrd.server;
 
-import io.grpc.Channel;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import pt.tecnico.rrrd.contract.BackupServerGrpc;
-import pt.tecnico.rrrd.contract.BackupServerGrpc.BackupServerStub;
 import pt.tecnico.rrrd.contract.BackupServerGrpc.BackupServerBlockingStub;
-import pt.tecnico.rrrd.contract.RemoteServerGrpc;
+import pt.tecnico.rrrd.contract.BackupServerGrpc.BackupServerStub;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
 import java.net.URISyntaxException;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 
@@ -28,9 +25,10 @@ public class RrrdBackupClientApp {
     private final String certChainFilePath = "remote.crt";
     private final String privateKeyFilePath = "remote.key";
     private final ManagedChannel channel;
+    private static String keyStorePassword = "password";
 
     public RrrdBackupClientApp(String address, int port) throws SSLException, URISyntaxException {
-        this.channel = this.initialize(address,port);
+        this.channel = this.initialize(address, port);
     }
 
     private SslContextBuilder getSslContextBuilder() throws URISyntaxException {
@@ -48,20 +46,20 @@ public class RrrdBackupClientApp {
     }
 
 
-
     public static void main(String[] args) throws Exception {
 
-        if (args.length < 2) {
+        if (args.length < 3) {
             System.err.println("Argument(s) missing!");
-            System.err.printf("Usage: java %s host port ", RrrdBackupClientApp.class.getName());
+            System.err.printf("Usage: java %s host port mode\nAvailable modes: terminal, auto", RrrdBackupClientApp.class.getName());
             return;
         }
 
         final String address = args[0];
         final int port = Integer.parseInt(args[1]);
+        final String mode = args[2];
 
         RrrdBackupClientApp client = new RrrdBackupClientApp(address, port);
-        RrrdBackupClientAPI clientAPI = new RrrdBackupClientAPI(client.blockingStub, client.asyncStub);
+        RrrdBackupClientAPI clientAPI = new RrrdBackupClientAPI(client.blockingStub, client.asyncStub, keyStorePassword);
 
         //Clean channel after Ctrl-C
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -77,11 +75,18 @@ public class RrrdBackupClientApp {
             }
         });
 
-        while (true) {
-            Thread.sleep(updateInterval * 1000);
-            clientAPI.update();
+        if (mode.equals("auto")) {
+            while (true) {
+                Thread.sleep(updateInterval * 1000);
+                clientAPI.update();
+            }
+        } else if (mode.equals("terminal")) {
+            clientAPI.getVersions();
+            Scanner input = new Scanner(System.in);
+            System.out.print("Insert version to restore: ");
+            int version = Integer.parseInt(input.nextLine());
+            clientAPI.restore(version);
+            client.channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
         }
-
     }
-
 }
