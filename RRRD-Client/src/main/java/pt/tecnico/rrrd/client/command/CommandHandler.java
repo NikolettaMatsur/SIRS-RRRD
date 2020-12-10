@@ -1,5 +1,6 @@
 package pt.tecnico.rrrd.client.command;
 
+import io.grpc.Status;
 import pt.tecnico.rrrd.client.RrrdClientApp;
 import pt.tecnico.rrrd.client.utils.Utils;
 import pt.tecnico.rrrd.contract.*;
@@ -8,6 +9,7 @@ import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
 
 import javax.crypto.SecretKey;
+import io.grpc.StatusRuntimeException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,6 +19,7 @@ import java.security.Key;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class CommandHandler implements ICommandHandler {
@@ -45,7 +48,6 @@ public class CommandHandler implements ICommandHandler {
                     build();
 
             PullResponse pullResponse = this.blockingStub.pull(pullRequest);
-            System.out.println(pullResponse);
 
             byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
                     CryptographicOperations.getPrivateKey(RrrdClientApp.keyStorePassword, "asymmetric_keys"));
@@ -56,11 +58,15 @@ public class CommandHandler implements ICommandHandler {
 
             CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, pull.getDocumentId(), secretKey);
 
-            PrintWriter writer = new PrintWriter(pull.getOutputPath(), StandardCharsets.UTF_8);
+            PrintWriter writer = new PrintWriter("/home/" + Utils.getUserName() + "/sync/client/" + pull.getDocumentId() + ".txt", StandardCharsets.UTF_8);
             writer.println(new String(decryptedDocument));
             writer.close();
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
+                System.err.println(e.getMessage());
+            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -70,11 +76,11 @@ public class CommandHandler implements ICommandHandler {
     public void handle(Push push) {
         try {
 
-            String documentData = Files.readString(Paths.get(push.getDocumentPath()), StandardCharsets.UTF_8);
+            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + push.getDocumentId() + ".txt"), StandardCharsets.UTF_8);
 
             PushMessage pushMessage = PushMessage.newBuilder().
                     setDocumentId(push.getDocumentId()).
-                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, push.getDocumentId(), documentData.getBytes())).
+                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, push.getDocumentId(), documentData.trim().getBytes())).
                     setTimestamp(CryptographicOperations.getTimestamp()).
                     build();
 
