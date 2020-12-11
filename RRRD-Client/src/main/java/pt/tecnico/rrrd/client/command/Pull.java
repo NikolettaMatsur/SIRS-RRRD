@@ -1,5 +1,7 @@
 package pt.tecnico.rrrd.client.command;
 
+import javax.naming.AuthenticationException;
+
 public class Pull implements ICommand {
 
     private String documentId;
@@ -19,7 +21,7 @@ public class Pull implements ICommand {
     }
 
     @Override
-    public void accept(ICommandHandler commandHandler) {
+    public void accept(ICommandHandler commandHandler) throws AuthenticationException {
         commandHandler.handle(this);
     }
 }

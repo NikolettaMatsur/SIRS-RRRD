@@ -30,6 +30,7 @@ public class AuthorizationServerInterceptor implements ServerInterceptor {
                 return Contexts.interceptCall(ctx, serverCall, metadata, serverCallHandler);
             } catch (Exception e) {
                 System.out.println("Verification failed - Unauthenticated!");
+                System.out.println(e.getMessage());
                 serverCall.close(Status.UNAUTHENTICATED.withDescription(e.getMessage()).withCause(e), metadata);
                 return new ServerCall.Listener() {};
             }
