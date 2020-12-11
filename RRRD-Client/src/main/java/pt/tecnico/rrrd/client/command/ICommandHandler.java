@@ -10,7 +10,7 @@ public interface ICommandHandler {
 
     void handle(AddPermission addPermission);
 
-    boolean handle(Login login);
+    String handle(Login login);
 
     void handle(Logout logout);
 }

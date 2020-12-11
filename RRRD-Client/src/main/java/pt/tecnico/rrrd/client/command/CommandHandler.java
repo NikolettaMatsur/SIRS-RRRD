@@ -201,7 +201,7 @@ public class CommandHandler implements ICommandHandler {
     }
 
     @Override
-    public boolean handle(Login login) {
+    public String handle(Login login) {
         try {
             LoginCredentials loginCredentials = LoginCredentials.newBuilder().
                     setUsername(login.getUsername()).
@@ -220,20 +220,21 @@ public class CommandHandler implements ICommandHandler {
                     setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", loginMessage.toByteArray())).
                     build();
 
-//            LoginResponse loginResponse = this.blockingStub.push(loginRequest);
+            LoginResponse loginResponse = this.blockingStub.login(loginRequest);
 
-            return true;
+            return loginResponse.getToken();
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            return false;
+            return null;
         }
     }
 
     @Override
     public void handle(Logout logout) {
         try {
-//            LogoutResponse logoutResponse = this.blockingStub.push(LogoutRequest.newBuilder().build());
-
+            System.out.println("123");
+            LogoutResponse logoutResponse = this.blockingStub.logout(LogoutRequest.newBuilder().build());
+            System.out.println("abc");
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
