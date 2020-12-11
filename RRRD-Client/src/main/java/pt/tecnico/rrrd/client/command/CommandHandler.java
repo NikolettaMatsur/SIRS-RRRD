@@ -12,6 +12,8 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.naming.AuthenticationException;
+
 import io.grpc.StatusRuntimeException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -41,7 +43,7 @@ public class CommandHandler implements ICommandHandler {
     }
 
     @Override
-    public void handle(Pull pull) {
+    public void handle(Pull pull) throws AuthenticationException {
         try {
             PullMessage pullMessage = PullMessage.newBuilder().
                     setDocumentId(pull.getDocumentId()).
@@ -80,13 +82,17 @@ public class CommandHandler implements ICommandHandler {
             if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
                 System.err.println(e.getMessage());
             }
+
+            if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
+                throw new AuthenticationException("Token expired please login again.");
+            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
     @Override
-    public void handle(Push push) {
+    public void handle(Push push) throws AuthenticationException {
         try {
 
             String documentData = Files.readString(Paths.get(clientRootDirectory + push.getDocumentId() + ".txt"), StandardCharsets.UTF_8);
@@ -109,13 +115,17 @@ public class CommandHandler implements ICommandHandler {
             logger.info(String.format("Received Push Response: {Message: %s}\n", pushResponse.getMessage()));
         } catch (NoSuchFileException e) {
             logger.severe("No such file: " + e.getFile());
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
+                throw new AuthenticationException("Token expired please login again.");
+            }
         } catch (Exception e) {
             logger.severe(e.getClass() + ": " + e.getMessage());
         }
     }
 
     @Override
-    public void handle(AddFile addFile) {
+    public void handle(AddFile addFile) throws AuthenticationException {
         try {
             String documentData = Files.readString(Paths.get(clientRootDirectory + addFile.getDocumentId() + ".txt"), StandardCharsets.US_ASCII);
 
@@ -138,12 +148,16 @@ public class CommandHandler implements ICommandHandler {
             CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, addFile.getDocumentId(), secretKey);
 
         } catch (NoSuchFileException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             System.out.println("No such file: " + e.getFile());
         } catch (StatusRuntimeException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
                 System.err.println(e.getMessage());
+            }
+
+            if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
+                throw new AuthenticationException("Token expired please login again.");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -152,7 +166,7 @@ public class CommandHandler implements ICommandHandler {
     }
 
     @Override
-    public void handle(AddPermission addPermission) {
+    public void handle(AddPermission addPermission) throws AuthenticationException {
         try {
             AddPermissionMessage addPermissionMessage = AddPermissionMessage.newBuilder().
                     setDocumentId(addPermission.getDocumentId()).
@@ -168,6 +182,10 @@ public class CommandHandler implements ICommandHandler {
 
             AddPermissionResponse addPermissionResponse = this.blockingStub.addPermission(addPermissionRequest);
             System.out.println("Received response: " + addPermissionResponse.getMessage());
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
+                throw new AuthenticationException("Token expired please login again.");
+            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -230,11 +248,15 @@ public class CommandHandler implements ICommandHandler {
     }
 
     @Override
-    public void handle(Logout logout) {
+    public void handle(Logout logout) throws AuthenticationException {
         try {
             System.out.println("123");
             LogoutResponse logoutResponse = this.blockingStub.logout(LogoutRequest.newBuilder().build());
             System.out.println("abc");
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
+                throw new AuthenticationException("Token expired please login again.");
+            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }

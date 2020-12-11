@@ -49,7 +49,7 @@ public class DatabaseManager {
         conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
         System.out.println("Updating user " + username );
 
-        String query = "UPDATE users SET password = ? AND salt = ? HERE username = ?";
+        String query = "UPDATE users SET password = ?, salt = ? WHERE username = ?";
 
         stmt = conn.prepareStatement(query);
         stmt.setBytes(1, password);
@@ -70,26 +70,28 @@ public class DatabaseManager {
         System.out.println("Removing user " + username );
 
         //delete user means to delete their user, their permissions, and files that dont have more permission
-        String query = "DELETE users INNER JOIN permissions " +
-                "WHERE users.username=permission.username and user.username=?";
-
-        stmt = conn.prepareStatement(query);
+        String permissions = "DELETE FROM permissions WHERE username=?";
+        stmt = conn.prepareStatement(permissions);
         stmt.setString(1, username);
+        stmt.executeUpdate();
 
-        stmt.execute();
-
-        query = "UPDATE files SET owner=NULL WHERE owner=? ";
-
-        stmt = conn.prepareStatement(query);
+        String users = "DELETE FROM users WHERE username=?";
+        stmt = conn.prepareStatement(users);
         stmt.setString(1, username);
-        stmt.execute();
+        stmt.executeUpdate();
 
-        //TODO file is never deleted
+        String files = "UPDATE files SET owner=NULL WHERE owner=? ";
+        stmt = conn.prepareStatement(files);
+        stmt.setString(1, username);
+        stmt.executeUpdate();
+        
+        //TODO file is never deleted, it should be if it has no permissions -> natural join
         stmt.close();
         conn.close();
     }
 
 
+    //to use when altering password through grpc
     public boolean verifyUserPassword(String username, byte[] password) throws SQLException {
         PreparedStatement stmt = null;
         ResultSet rst = null;
