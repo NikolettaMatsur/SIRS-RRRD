@@ -7,6 +7,8 @@ service RemoteServer {
   rpc Pull (PullRequest) returns (PullResponse) {}
   rpc Push (PushRequest) returns (PushResponse) {}
   rpc AddNewFile (AddFileRequest) returns (AddFileResponse) {}
+  rpc GetPubKeys (GetPubKeysRequest) returns (GetPubKeysResponse) {}
+  rpc AddPermission (AddPermissionRequest) returns (AddPermissionResponse) {}
 }
 
 message PullRequest {
@@ -76,8 +78,9 @@ message AddPermissionRequest {
 
 message AddPermissionMessage {
   string documentId = 1;
-  repeated string pubKeys = 2;
-  string timestamp = 3;
+  string username = 2;
+  repeated string pubKeys = 3;
+  string timestamp = 4;
 }
 
 message AddPermissionResponse {
