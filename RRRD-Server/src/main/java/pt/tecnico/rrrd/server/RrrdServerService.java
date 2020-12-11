@@ -168,7 +168,6 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             // Verify signature and ts
             PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
-            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
 
             if (verifySig && verifyTimestamp) {
                 logger.info(String.format("Signature and Timestamp verified. Returning encrypted file: %s", Utils.getFileRepository(request.getMessage().getDocumentId())));

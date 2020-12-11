@@ -192,4 +192,16 @@ public class CryptographicOperations {
     public static String getTimestamp() {
         return String.valueOf(new Timestamp(System.currentTimeMillis()));
     }
+
+    public PublicKey getPublicKeyFromString(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
+        byte[] bytes = Base64.getDecoder().decode(key);
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(bytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePublic(spec);
+    }
+
+    public String getPublicKeyToString(String password, String alias) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
+        return Base64.getEncoder().encodeToString(getPublicKey(password, alias).getEncoded());
+    }
+
 }
