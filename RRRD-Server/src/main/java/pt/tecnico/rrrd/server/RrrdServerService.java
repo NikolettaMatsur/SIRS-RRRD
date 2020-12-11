@@ -179,4 +179,39 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                     .asRuntimeException());
         }
     }
+
+    @Override
+    public void addPermission(AddPermissionRequest request, StreamObserver<AddPermissionResponse> responseObserver) {
+        try {
+            logger.info(String.format("Received AddPermission Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getUsername(), request.getMessage().getTimestamp()));
+
+            // Verify signature and ts
+            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
+
+            if (verifySig && verifyTimestamp) {
+                logger.info("Signature and Timestamp verified.");
+
+                // TODO verify if document request.getMessage().getDocumentId() exists
+                // TODO verify if logged user id the owner of the document request.getMessage().getDocumentId()
+                // TODO verify if user request.getMessage().getUsername() exists
+                // TODO store request.getMessage().getPubKeys()
+                // TODO give permission to user request.getMessage().getUsername() on file request.getMessage().getDocumentId()
+
+                AddPermissionResponse addPermissionResponse = AddPermissionResponse.newBuilder().setMessage("OK").build();
+
+            } else {
+                String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
+                logger.info(message + " Aborting operation.");
+
+                throw new InvalidParameterException(message);
+            }
+
+        } catch (Exception e) {
+            responseObserver.onError(Status.DATA_LOSS
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        }
+    }
 }
