@@ -16,6 +16,7 @@ message Document {
 
 message UpdateMessage {
   repeated Document documentList = 1;
+  Document dbBackup = 2;
   string timestamp = 3;
 }
 
@@ -36,7 +37,8 @@ message RestoreRequest {
 
 message RestoreMessage{
   repeated Document documentList = 1;
-  string timestamp = 2;
+  Document dbBackup = 2;
+  string timestamp = 3;
 }
 
 message RestoreResponse {

@@ -7,6 +7,10 @@ import pt.tecnico.rrrd.crypto.CryptographicOperations;
 import pt.tecnico.rrrd.crypto.DataOperations;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.PublicKey;
 import java.util.Base64;
 import java.util.logging.Logger;
@@ -32,7 +36,7 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
         try {
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(updateMessage.getTimestamp());
             byte[] signature = Base64.getDecoder().decode(request.getSignature());
-            publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys");
+            publicKey = CryptographicOperations.getPublicKey("password", "remote");
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, updateMessage.toByteArray(), signature);
 
             if (!verifySig || !verifyTimestamp) {
@@ -63,6 +67,8 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
                 DataOperations.deleteDirectory(oldDirectory);
                 File metaData = new File("versions/" + (version - MAX_VERSIONS) + ".txt");
                 metaData.delete();
+                File dbBackup = new File("versions/" + (version - MAX_VERSIONS) + ".sql");
+                dbBackup.delete();
             }
         }
 
@@ -73,8 +79,10 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
         }
 
         String metaData = updateMessage.getTimestamp() + "\n" + updateMessage.getDocumentListCount();
-
         DataOperations.writeFile("versions/" + version + ".txt", metaData);
+
+        String dbBackup = updateMessage.getDbBackup().getEncryptedDocument();
+        DataOperations.writeFile("versions/" + version + ".sql", dbBackup);
 
         UpdateResponse updateResponse = UpdateResponse.newBuilder().setStatus("OK").setSignature("0").build();
 
@@ -108,6 +116,15 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
                 restoreMessageBuilder.addDocumentList(document);
             }
         }
+        String dbBackupString = null;
+        try {
+            dbBackupString = Files.readString(Path.of("versions/" + requestedVersion + ".sql"), StandardCharsets.ISO_8859_1);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Document dbBackup = Document.newBuilder().setDocumentId("backup.sql").setEncryptedDocument(dbBackupString).build();
+
+        restoreMessageBuilder.setDbBackup(dbBackup);
         restoreMessageBuilder.setTimestamp(CryptographicOperations.getTimestamp());
         RestoreMessage restoreMessage = restoreMessageBuilder.build();
 

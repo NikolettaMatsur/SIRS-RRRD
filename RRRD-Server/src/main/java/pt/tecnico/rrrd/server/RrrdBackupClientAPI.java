@@ -8,11 +8,18 @@ import pt.tecnico.rrrd.contract.*;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
 import pt.tecnico.rrrd.crypto.DataOperations;
 
+import java.awt.*;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.util.Base64;
+import java.util.Properties;
 import java.util.Scanner;
 import java.util.logging.Logger;
 
@@ -56,7 +63,12 @@ public class RrrdBackupClientAPI {
                 updateMessageBuilder.addDocumentList(document);
             }
         }
+
+        Document dbBackup = Document.newBuilder().setDocumentId("backup.sql").setEncryptedDocument(dumpDatabase()).build();
+
+
         updateMessageBuilder.setTimestamp(CryptographicOperations.getTimestamp());
+        updateMessageBuilder.setDbBackup(dbBackup);
         UpdateMessage updateMessage = updateMessageBuilder.build();
         UpdateRequest updateRequest = UpdateRequest.newBuilder()
                 .setUpdateMessage(updateMessageBuilder.build())
@@ -98,7 +110,7 @@ public class RrrdBackupClientAPI {
         try {
             verifyTimestamp = CryptographicOperations.verifyTimestamp(restoreMessage.getTimestamp());
             byte[] signature = Base64.getDecoder().decode(restoreResponse.getSignature());
-            publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys");
+            publicKey = CryptographicOperations.getPublicKey("password", "backup");
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, restoreMessage.toByteArray(), signature);
 
             if (!verifySig || !verifyTimestamp) {
@@ -116,12 +128,101 @@ public class RrrdBackupClientAPI {
         for (Document document : restoreMessage.getDocumentListList()) {
             DataOperations.writeFile("sync_new/" + document.getDocumentId(), document.getEncryptedDocument());
         }
+        File new_backup_directory = new File("backup_new/");
+        new_backup_directory.mkdir();
+        DataOperations.writeFile("backup_new/" + restoreMessage.getDbBackup().getDocumentId(), restoreMessage.getDbBackup().getEncryptedDocument());
+
         File old_directory = new File("sync/");
         DataOperations.deleteDirectory(old_directory);
         new_directory.renameTo(new File("sync/"));
 
+        File old_backup_directory = new File("backup/");
+        DataOperations.deleteDirectory(old_backup_directory);
+        new_backup_directory.renameTo(new File("backup/"));
+        restoreDatabase();
+
 
         logger.info("Restore Successful.");
+    }
+
+    public static String dumpDatabase() {
+        String result = null;
+        try {
+            System.out.println("Database Backup Started");
+
+            Properties prop = new Properties();
+            prop.load(new FileInputStream("src/main/java/pt/tecnico/rrrd/server/database/database.properties"));
+            String[] dbUrl = prop.getProperty("dbUrl").split("/");
+            String dbname = dbUrl[dbUrl.length - 1];
+            String dbUser = prop.getProperty("dbUser");
+            String dbPassword = prop.getProperty("dbPassword");
+
+            /*NOTE: Creating Path Constraints for folder saving*/
+            /*NOTE: Here the backup folder is created for saving inside it*/
+            String folderPath = "backup/";
+
+            /*NOTE: Creating Folder if it does not exist*/
+            File f1 = new File(folderPath);
+            f1.mkdir();
+            String savePath = folderPath + "backup.sql";
+            /*NOTE: Creating Path Constraints for backup saving*/
+            /*NOTE: Here the backup is saved in a folder called backup with the name backup.sql*/
+
+            /*NOTE: Used to create a cmd command*/
+            String executeCmd = "mysqldump -u" + dbUser + " -p" + dbPassword + " --databases " + dbname + " -r " + savePath;
+
+            /*NOTE: Executing the command here*/
+            Process runtimeProcess = Runtime.getRuntime().exec(executeCmd);
+            int processComplete = runtimeProcess.waitFor();
+
+            /*NOTE: processComplete=0 if correctly executed, will contain other values if not*/
+            if (processComplete == 0) {
+                System.out.println("Database Backup Complete");
+            } else {
+                System.out.println("Database Backup Failure");
+            }
+
+            result = Files.readString(Path.of(savePath), StandardCharsets.ISO_8859_1);
+        } catch (IOException | InterruptedException ex) {
+            ex.printStackTrace();
+        }
+        return result;
+
+    }
+
+    public static void restoreDatabase() {
+        try {
+            System.out.println("Database Restore Started");
+
+            Properties prop = new Properties();
+            prop.load(new FileInputStream("src/main/java/pt/tecnico/rrrd/server/database/database.properties"));
+            String[] dbUrl = prop.getProperty("dbUrl").split("/");
+            String dbname = dbUrl[dbUrl.length - 1];
+            String dbUser = prop.getProperty("dbUser");
+            String dbPassword = prop.getProperty("dbPassword");
+
+            String restorePath = "backup/backup.sql";
+
+            /*NOTE: Used to create a cmd command*/
+            /*NOTE: Do not create a single large string, this will cause buffer locking, use string array*/
+//            String[] executeCmd = new String[]{"mysql", dbname, "-u" + dbUser, "-p" + dbPassword, "-e", " source " + restorePath};
+            String executeCmd = "mysql -u" + dbUser + " -p" + dbPassword + " " + dbname + " -e \"source " + restorePath + "\"";
+            /*NOTE: processComplete=0 if correctly executed, will contain other values if not*/
+            Process runtimeProcess = Runtime.getRuntime().exec(executeCmd);
+            int processComplete = runtimeProcess.waitFor();
+
+            /*NOTE: processComplete=0 if correctly executed, will contain other values if not*/
+            if (processComplete == 0) {
+                System.out.println("Database Restore Complete");
+            } else {
+                System.out.println("Database Restore Failed");
+            }
+
+
+        } catch (IOException | InterruptedException | HeadlessException ex) {
+            ex.printStackTrace();
+        }
+
     }
 
 

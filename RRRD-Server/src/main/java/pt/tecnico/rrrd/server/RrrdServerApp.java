@@ -6,6 +6,7 @@ import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
+import pt.tecnico.rrrd.crypto.CryptographicOperations;
 import pt.tecnico.rrrd.server.command.*;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslProvider;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc;
@@ -96,9 +97,7 @@ public class  RrrdServerApp {
 
         address = args[0];
         port = Integer.parseInt(args[1]);
-
         RrrdServerApp serverApp = new RrrdServerApp(address, port);
-
         serverApp.start();
         ICommandHandler commandHandler = new CommandHandler();
 
