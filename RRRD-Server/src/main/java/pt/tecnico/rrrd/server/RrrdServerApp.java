@@ -1,13 +1,20 @@
 package pt.tecnico.rrrd.server;
 
 import io.grpc.Server;
+import io.grpc.ServerBuilder;
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
+import io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import pt.tecnico.rrrd.server.command.*;
+import io.grpc.netty.shaded.io.netty.handler.ssl.SslProvider;
+import pt.tecnico.rrrd.contract.RemoteServerGrpc;
+import pt.tecnico.rrrd.server.utils.AuthorizationServerInterceptor;
 
+import javax.net.ssl.SSLException;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -16,7 +23,7 @@ import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-public class RrrdServerApp {
+public class  RrrdServerApp {
 
     private final Server server;
     private final Logger logger;
@@ -25,14 +32,15 @@ public class RrrdServerApp {
     private final String certChainFilePath = "remote.crt";
     private final String privateKeyFilePath = "remote.key";
 
-    public RrrdServerApp(String address, int port) throws IOException, URISyntaxException, ClassNotFoundException{
+    public RrrdServerApp(String address, int port) throws IOException, URISyntaxException, ClassNotFoundException {
         this.logger = Logger.getLogger(RrrdServerApp.class.getName());
         this.server = this.initialize(address, port);
     }
 
-    public Server initialize(String address, int port) throws IOException, URISyntaxException, ClassNotFoundException{
+    public Server initialize(String address, int port) throws IOException, URISyntaxException, ClassNotFoundException {
 
         return NettyServerBuilder.forAddress(new InetSocketAddress(address, port))
+                .intercept(new AuthorizationServerInterceptor())
                 .addService(new RrrdServerService())
                 .sslContext(getSslContextBuilder().build())
                 .build();

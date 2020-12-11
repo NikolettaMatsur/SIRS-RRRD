@@ -1,16 +1,18 @@
 package pt.tecnico.rrrd.client.command;
 
+import javax.naming.AuthenticationException;
+
 public interface ICommandHandler {
 
-    void handle(Pull pull);
+    void handle(Pull pull) throws AuthenticationException;
 
-    void handle(Push push);
+    void handle(Push push) throws AuthenticationException;
 
-    void handle(AddFile addFile);
+    void handle(AddFile addFile) throws AuthenticationException;
 
-    void handle(AddPermission addPermission);
+    void handle(AddPermission addPermission) throws AuthenticationException;
 
-    boolean handle(Login login);
+    String handle(Login login);
 
-    void handle(Logout logout);
+    void handle(Logout logout) throws AuthenticationException;
 }

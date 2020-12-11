@@ -1,9 +1,13 @@
 package pt.tecnico.rrrd.server;
 
+import io.grpc.Context;
 import io.grpc.stub.StreamObserver;
 import io.grpc.Status;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import pt.tecnico.rrrd.contract.*;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
+import pt.tecnico.rrrd.server.utils.Constants;
 import pt.tecnico.rrrd.server.utils.Utils;
 
 import javax.crypto.SecretKeyFactory;
@@ -22,6 +26,10 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.Base64;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
@@ -304,6 +312,9 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
                 AddPermissionResponse addPermissionResponse = AddPermissionResponse.newBuilder().setMessage("OK").build();
 
+                responseObserver.onNext(addPermissionResponse);
+                responseObserver.onCompleted();
+
             } else {
                 String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
                 logger.info(message + " Aborting operation.");
@@ -316,5 +327,60 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                     .withDescription(e.getMessage())
                     .asRuntimeException());
         }
+    }
+
+    @Override
+    public void login(LoginRequest request, StreamObserver<LoginResponse> responseObserver) {
+
+
+        try {
+            logger.info(String.format("Received Login Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getCredentials().getUsername(), request.getMessage().getTimestamp()));
+
+            // Verify signature and ts
+            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
+
+            if (verifySig && verifyTimestamp) {
+                logger.info("Signature and Timestamp verified.");
+
+                // TODO Verify if user exists
+
+                String jws = Jwts.builder().
+                        setSubject(request.getMessage().getCredentials().getUsername()).
+                        signWith(CryptographicOperations.getPrivateKey("password", "asymmetric_keys"), SignatureAlgorithm.RS256).
+                        setIssuedAt(new Date(System.currentTimeMillis())).
+                        setExpiration(new Date(System.currentTimeMillis() + 30 * 60 * 1000)). // 30 MINUTE EXPIRATION
+                        compact();
+
+                LoginResponse loginResponse = LoginResponse.newBuilder().
+                        setToken(jws).
+                        build();
+
+                responseObserver.onNext(loginResponse);
+                responseObserver.onCompleted();
+
+            } else {
+                String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
+                logger.info(message + " Aborting operation.");
+
+                throw new InvalidParameterException(message);
+            }
+
+        } catch (Exception e) {
+            responseObserver.onError(Status.DATA_LOSS
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void logout(LogoutRequest request, StreamObserver<LogoutResponse> responseObserver) {
+        logger.info("Received Logout request\n");
+
+        System.out.printf(Constants.CLIENT_ID_CONTEXT_KEY.get());  // GET CLIENT USERNAME FORM TOKEN
+
+        responseObserver.onNext(LogoutResponse.newBuilder().build());
+        responseObserver.onCompleted();
     }
 }
