@@ -69,7 +69,7 @@ message GetPubKeysMessage {
 }
 
 message GetPubKeysResponse {
-  repeated string pubKeys = 1;
+  map<int32, string> pubKeys = 1;
 }
 
 message AddPermissionRequest {
@@ -80,7 +80,7 @@ message AddPermissionRequest {
 message AddPermissionMessage {
   string documentId = 1;
   string username = 2;
-  repeated string pubKeys = 3;
+  map<int32, string> pubKeys = 3;
   string timestamp = 4;
 }
 
