@@ -130,12 +130,15 @@ public class CommandHandler implements ICommandHandler {
             CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, addFile.getDocumentId(), secretKey);
 
         } catch (NoSuchFileException e) {
+            e.printStackTrace();
             System.out.println("No such file: " + e.getFile());
         } catch (StatusRuntimeException e) {
+            e.printStackTrace();
             if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
                 System.err.println(e.getMessage());
             }
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println(e.getMessage());
         }
     }

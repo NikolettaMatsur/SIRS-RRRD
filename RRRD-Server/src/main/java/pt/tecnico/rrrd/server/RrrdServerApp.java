@@ -29,12 +29,12 @@ public class  RrrdServerApp {
     private final String certChainFilePath = "remote.crt";
     private final String privateKeyFilePath = "remote.key";
 
-    public RrrdServerApp(String address, int port) throws SSLException, URISyntaxException {
+    public RrrdServerApp(String address, int port) throws IOException, URISyntaxException, ClassNotFoundException {
         this.logger = Logger.getLogger(RrrdServerApp.class.getName());
         this.server = this.initialize(address, port);
     }
 
-    public Server initialize(String address, int port) throws SSLException, URISyntaxException {
+    public Server initialize(String address, int port) throws IOException, URISyntaxException, ClassNotFoundException {
 
         return NettyServerBuilder.forAddress(new InetSocketAddress(address, port))
                 .intercept(new AuthorizationServerInterceptor())

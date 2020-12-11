@@ -11,6 +11,7 @@ import pt.tecnico.rrrd.server.utils.Constants;
 import pt.tecnico.rrrd.server.utils.Utils;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -25,9 +26,11 @@ import java.util.logging.Logger;
 
 public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
     private final Logger logger;
+    private DatabaseManager databaseManager;
 
-    public RrrdServerService(){
+    public RrrdServerService() throws IOException, ClassNotFoundException {
         this.logger = Logger.getLogger(RrrdServerApp.class.getName());
+        this.databaseManager = new DatabaseManager();
     }
 
     @Override
