@@ -1,0 +1,5 @@
+#Database Properties
+jdbcDriver=com.mysql.cj.jdbc.Driver
+dbUrl=jdbc:mysql://localhost:3306/<database-name>
+dbUser=<user>
+dbPassword=<password>

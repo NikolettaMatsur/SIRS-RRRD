@@ -6,3 +6,4 @@
 SIRS-RRRD.iml
 /.idea/
 /*/target/
+/RRRD-Server/src/main/java/pt/tecnico/rrrd/server/database/database.properties
