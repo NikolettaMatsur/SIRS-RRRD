@@ -34,9 +34,9 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received Pull Request: {Document Id: %s, Timestamp: %s}\n", request.getMessage().getDocumentId(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
             PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
-            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
 
             // TODO verify user permissions
 

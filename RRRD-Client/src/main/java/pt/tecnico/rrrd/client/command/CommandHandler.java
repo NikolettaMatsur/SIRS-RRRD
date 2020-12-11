@@ -32,6 +32,7 @@ public class CommandHandler implements ICommandHandler {
     private final RemoteServerBlockingStub blockingStub;
     private final RemoteServerStub asyncStub;
     private final Logger logger;
+    private String clientRootDirectory = "/home/" + Utils.getUserName() + "/sync/client/";
 
     public CommandHandler(RemoteServerBlockingStub blockingStub, RemoteServerStub asyncStub) {
         this.logger = Logger.getLogger(CommandHandler.class.getName());
@@ -52,10 +53,15 @@ public class CommandHandler implements ICommandHandler {
                     setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", pullMessage.toByteArray())).
                     build();
 
+            logger.info(String.format("Pull Request sent for file %s", pull.getDocumentId()));
             PullResponse pullResponse = this.blockingStub.pull(pullRequest);
+            logger.info(String.format("Pull Response received, decrypting...", pull.getDocumentId()));
 
-            byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
-                    CryptographicOperations.getPrivateKey(RrrdClientApp.keyStorePassword, "asymmetric_keys"));
+            byte[] documentKeyBytes = CryptographicOperations.getDocumentKey(RrrdClientApp.keyStorePassword, pullMessage.getDocumentId()).getEncoded();
+
+            //TODO: Change documentKeyBytes to decrypted key when db is up
+//            byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
+//                    CryptographicOperations.getPrivateKey(RrrdClientApp.keyStorePassword, "asymmetric_keys"));
 
             SecretKey secretKey = CryptographicOperations.convertToSymmetricKey(documentKeyBytes);
             byte[] decryptedDocument = CryptographicOperations.symmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocument()),
@@ -63,9 +69,11 @@ public class CommandHandler implements ICommandHandler {
 
             CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, pull.getDocumentId(), secretKey);
 
-            PrintWriter writer = new PrintWriter("/home/" + Utils.getUserName() + "/sync/client/" + pull.getDocumentId() + ".txt", StandardCharsets.UTF_8);
+            PrintWriter writer = new PrintWriter( clientRootDirectory + pull.getDocumentId() + ".txt", StandardCharsets.UTF_8);
             writer.println(new String(decryptedDocument));
             writer.close();
+            logger.info(String.format("Pull Response decrypted and stored in %s.",clientRootDirectory + pull.getDocumentId() + ".txt"));
+
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
         } catch (StatusRuntimeException e) {
@@ -81,7 +89,7 @@ public class CommandHandler implements ICommandHandler {
     public void handle(Push push) {
         try {
 
-            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + push.getDocumentId() + ".txt"), StandardCharsets.UTF_8);
+            String documentData = Files.readString(Paths.get(clientRootDirectory + push.getDocumentId() + ".txt"), StandardCharsets.UTF_8);
 
             PushMessage pushMessage = PushMessage.newBuilder().
                     setDocumentId(push.getDocumentId()).
@@ -109,7 +117,7 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(AddFile addFile) {
         try {
-            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + addFile.getDocumentId() + ".txt"), StandardCharsets.US_ASCII);
+            String documentData = Files.readString(Paths.get(clientRootDirectory + addFile.getDocumentId() + ".txt"), StandardCharsets.US_ASCII);
 
             SecretKey secretKey = CryptographicOperations.createDocumentKey();
             AddFileMessage addFileMessage = AddFileMessage.newBuilder().
@@ -229,5 +237,9 @@ public class CommandHandler implements ICommandHandler {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    public void changeRootDirectory(String path){
+        this.clientRootDirectory = path;
     }
 }
