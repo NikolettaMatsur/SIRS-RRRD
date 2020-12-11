@@ -145,6 +145,7 @@ public class CommandHandler implements ICommandHandler {
         try {
             AddPermissionMessage addPermissionMessage = AddPermissionMessage.newBuilder().
                     setDocumentId(addPermission.getDocumentId()).
+                    setUsername(addPermission.getUsername()).
                     setTimestamp(CryptographicOperations.getTimestamp()).
                     addAllPubKeys(getPubKeys(addPermission.getUsername(), addPermission.getDocumentId())).
                     build();
@@ -153,9 +154,9 @@ public class CommandHandler implements ICommandHandler {
                     setMessage(addPermissionMessage).
                     setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", addPermissionMessage.toByteArray())).
                     build();
-            System.out.println(addPermissionRequest);
-//            AddPermissionResponse addPermissionResponse = this.blockingStub.push(addPermissionRequest);
-//            System.out.println("Received response: " + addPermissionResponse);
+
+            AddPermissionResponse addPermissionResponse = this.blockingStub.addPermission(addPermissionRequest);
+            System.out.println("Received response: " + addPermissionResponse.getMessage());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
