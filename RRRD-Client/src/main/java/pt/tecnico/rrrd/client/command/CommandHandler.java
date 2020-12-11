@@ -37,6 +37,7 @@ public class CommandHandler implements ICommandHandler {
     private final RemoteServerBlockingStub blockingStub;
     private final RemoteServerStub asyncStub;
     private final Logger logger;
+    private String clientRootDirectory = "/home/" + Utils.getUserName() + "/sync/client/";
 
     public CommandHandler(RemoteServerBlockingStub blockingStub, RemoteServerStub asyncStub) {
         this.logger = Logger.getLogger(CommandHandler.class.getName());
@@ -57,10 +58,15 @@ public class CommandHandler implements ICommandHandler {
                     setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", pullMessage.toByteArray())).
                     build();
 
+            logger.info(String.format("Pull Request sent for file %s", pull.getDocumentId()));
             PullResponse pullResponse = this.blockingStub.pull(pullRequest);
+            logger.info(String.format("Pull Response received, decrypting...", pull.getDocumentId()));
 
-            byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
-                    CryptographicOperations.getPrivateKey(RrrdClientApp.keyStorePassword, "asymmetric_keys"));
+            byte[] documentKeyBytes = CryptographicOperations.getDocumentKey(RrrdClientApp.keyStorePassword, pullMessage.getDocumentId()).getEncoded();
+
+            //TODO: Change documentKeyBytes to decrypted key when db is up
+//            byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
+//                    CryptographicOperations.getPrivateKey(RrrdClientApp.keyStorePassword, "asymmetric_keys"));
 
             SecretKey secretKey = CryptographicOperations.convertToSymmetricKey(documentKeyBytes);
             byte[] decryptedDocument = CryptographicOperations.symmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocument()),
@@ -68,9 +74,12 @@ public class CommandHandler implements ICommandHandler {
 
             CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, pull.getDocumentId(), secretKey);
             String document = parseDocumentAndHash(decryptedDocument);
-            PrintWriter writer = new PrintWriter("/home/" + Utils.getUserName() + "/sync/client/" + pull.getDocumentId() + ".txt", StandardCharsets.UTF_8);
-            writer.println(document);
+
+            PrintWriter writer = new PrintWriter( clientRootDirectory + pull.getDocumentId() + ".txt", StandardCharsets.UTF_8);
+            writer.println(new String(decryptedDocument));
             writer.close();
+            logger.info(String.format("Pull Response decrypted and stored in %s.",clientRootDirectory + pull.getDocumentId() + ".txt"));
+
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
         } catch (StatusRuntimeException e) {
@@ -89,8 +98,7 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(Push push) throws AuthenticationException {
         try {
-
-            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + push.getDocumentId() + ".txt"), StandardCharsets.UTF_8).trim();
+            String documentData = Files.readString(Paths.get(clientRootDirectory + push.getDocumentId() + ".txt"), StandardCharsets.UTF_8);
 
             String jsonDocumentAndHash = createDocumentAndHash(documentData);
 
@@ -124,8 +132,7 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(AddFile addFile) throws AuthenticationException {
         try {
-            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + addFile.getDocumentId() + ".txt"), StandardCharsets.US_ASCII).trim();
-
+            String documentData = Files.readString(Paths.get(clientRootDirectory + addFile.getDocumentId() + ".txt"), StandardCharsets.US_ASCII);
             String jsonDocumentAndHash = createDocumentAndHash(documentData);
 
             SecretKey secretKey = CryptographicOperations.createDocumentKey();
@@ -273,10 +280,13 @@ public class CommandHandler implements ICommandHandler {
 
         JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
 
-        if(!CryptographicOperations.verifyMessageDigest(jsonObject.get("documentData").getAsString(), jsonObject.get("hash").getAsString())) {
+        if (!CryptographicOperations.verifyMessageDigest(jsonObject.get("documentData").getAsString(), jsonObject.get("hash").getAsString())) {
             throw new InvalidAttributeValueException("Document integrity could not be verified");
         }
 
         return jsonObject.get("documentData").getAsString();
+    }
+    public void changeRootDirectory(String path){
+        this.clientRootDirectory = path;
     }
 }

@@ -199,4 +199,15 @@ public class CryptographicOperations {
 
         return computedDigest.equals(digest);
     }
+
+    public PublicKey getPublicKeyFromString(String key) throws InvalidKeySpecException, NoSuchAlgorithmException {
+        byte[] bytes = Base64.getDecoder().decode(key);
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(bytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePublic(spec);
+    }
+
+    public String getPublicKeyToString(String password, String alias) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
+        return Base64.getEncoder().encodeToString(getPublicKey(password, alias).getEncoded());
+    }
 }
