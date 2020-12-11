@@ -1,6 +1,5 @@
 package pt.tecnico.rrrd.server;
 
-import io.grpc.Context;
 import io.grpc.stub.StreamObserver;
 import io.grpc.Status;
 import io.jsonwebtoken.Jwts;
@@ -35,10 +34,24 @@ import java.util.logging.Logger;
 public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
     private final Logger logger;
     private DatabaseManager databaseManager;
+    private Map<String, String> loggedPubKeys;
 
     public RrrdServerService() throws IOException, ClassNotFoundException {
         this.logger = Logger.getLogger(RrrdServerApp.class.getName());
         this.databaseManager = new DatabaseManager();
+        this.loggedPubKeys = new HashMap<String,String>();
+    }
+
+    private void insertLoginPubKey(String username, String key){
+        loggedPubKeys.put(username,key);
+    }
+
+    private void deleteLoginPubKey(String username){
+        loggedPubKeys.remove(username);
+    }
+
+    private String getLoggedUser(){
+        return Constants.CLIENT_ID_CONTEXT_KEY.get();
     }
 
     public boolean addUser(String username, String password) {
@@ -104,6 +117,17 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
         return null;
     }
 
+    public boolean verifyUserPassword(String username, String password){
+        try {
+            byte[] salt = databaseManager.getSalt(username);
+            byte[] hashedPw = getHashedAndSaltedPassword(password, salt);
+            return databaseManager.verifyUserPassword(username, hashedPw);
+        } catch (SQLException e){
+            logger.info(String.format("SQL error: %s\n", e.getMessage()));
+        }
+        return false;
+    }
+
 
     public boolean addPubKey(String username, String pubKey){
         try {
@@ -142,16 +166,26 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received Pull Request: {Document Id: %s, Timestamp: %s}\n", request.getMessage().getDocumentId(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
-            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
-
-            // TODO verify user permissions
-
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
             if (verifySig && verifyTimestamp) {
                 logger.info(String.format("Signature and Timestamp verified. Returning encrypted file: %s", Utils.getFileRepository(request.getMessage().getDocumentId())));
+                String key = "";
 
-                String key = ""; // TODO get file key encrypted with users public key
+                try{
+                    Integer pubkeyId = databaseManager.getPubKeyId(getLoggedUser(), CryptographicOperations.getStringPubKey(publicKey));
+                    key = databaseManager.getPermissionKey(request.getMessage().getDocumentId(), getLoggedUser(), pubkeyId);
+                    if (key == null){
+                        responseObserver.onError(Status.PERMISSION_DENIED
+                                .asRuntimeException());
+                        return;
+                    }
+                } catch (SQLException e) {
+                    responseObserver.onError(Status.PERMISSION_DENIED
+                            .asRuntimeException()); //meaning user doesn't have access with that key
+                    return;
+                }
 
                 String encryptedDocumentData = Files.readString(Paths.get(Utils.getFileRepository(request.getMessage().getDocumentId())), StandardCharsets.UTF_8);
 
@@ -186,7 +220,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
             logger.info(String.format("Received Push Request: {Document Id: %s, Timestamp: %s}\n", pushMessage.getDocumentId(), pushMessage.getTimestamp()));
 
-            publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, pushMessage.toByteArray(), signature);
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(pushMessage.getTimestamp());
             if (!verifySig || !verifyTimestamp) {
@@ -202,7 +236,15 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 writer.println(pushMessage.getEncryptedDocument());
                 writer.close();
 
-                PushResponse pushResponse = PushResponse.newBuilder().setMessage("OK").build();
+                try{
+                    databaseManager.insertFile(pushMessage.getDocumentId(), getLoggedUser());
+                } catch (SQLException e){ //prevents duplicates
+                    PushResponse pushResponse = PushResponse.newBuilder().setMessage(e.getMessage()).build();
+                    responseObserver.onNext(pushResponse);
+                    responseObserver.onCompleted();
+                }
+
+                PushResponse pushResponse = PushResponse.newBuilder().setMessage("OK").build(); //TODO doesnt need to send OK
 
                 responseObserver.onNext(pushResponse);
                 responseObserver.onCompleted();
@@ -221,7 +263,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received AddNewFile Request: {Document Id: %s, Timestamp: %s}\n", request.getMessage().getDocumentId(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
             boolean fileExits = new File(Utils.getFileRepository(request.getMessage().getDocumentId())).isFile();
@@ -229,11 +271,17 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             if (verifySig && verifyTimestamp && !fileExits) {
                 logger.info(String.format("Signature and Timestamp verified. Writing new file: %s", Utils.getFileRepository(request.getMessage().getDocumentId())));
 
-                // TODO add username to db and associate as the owner
-
                 PrintWriter writer = new PrintWriter(Utils.getFileRepository(request.getMessage().getDocumentId()), StandardCharsets.UTF_8);
                 writer.println(request.getMessage().getEncryptedDocument());
                 writer.close();
+
+                try {
+                    databaseManager.insertFile(request.getMessage().getDocumentId(), getLoggedUser());
+                } catch (SQLException e) {
+                    responseObserver.onError(Status.INTERNAL
+                            .withDescription(e.getMessage())
+                            .asRuntimeException());
+                }
 
                 AddFileResponse addFileResponse = AddFileResponse.newBuilder().
                         setMessage("OK").
@@ -261,15 +309,15 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received GetPubKeys Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getUsername(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            PublicKey publicKey =  CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
 
             if (verifySig && verifyTimestamp) {
                 logger.info("Signature and Timestamp verified.");
 
-                // TODO get all public keys from request.getMessage().getUsername()
-                List<String> pubKeys = new LinkedList<>();
+                Map<Integer,String> pubKeysMap =  databaseManager.getPubKeys(request.getMessage().getUsername());
+                List<String> pubKeys = new ArrayList<>(pubKeysMap.values());
 
                 GetPubKeysResponse getPubKeysResponse = GetPubKeysResponse.newBuilder().
                         addAllPubKeys(pubKeys).
@@ -297,16 +345,27 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received AddPermission Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getUsername(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
 
             if (verifySig && verifyTimestamp) {
                 logger.info("Signature and Timestamp verified.");
+                String filename = request.getMessage().getDocumentId();
+                try {
+                    if (!databaseManager.verifyOwner(filename, getLoggedUser())){
+                        //todo
+                    }
+                    Integer pubkeyId = databaseManager.getPubKeyId(getLoggedUser(), CryptographicOperations.getStringPubKey(publicKey));
+                      //Todo insert permission in a for loop
+                    //databaseManager.insertPermission(filename, getLoggedUser(), );
+                } catch (SQLException e){
+                    responseObserver.onError(Status.DATA_LOSS
+                            .withDescription(e.getMessage())
+                            .asRuntimeException());
+                    return;
+                }
 
-                // TODO verify if document request.getMessage().getDocumentId() exists
-                // TODO verify if logged user id the owner of the document request.getMessage().getDocumentId()
-                // TODO verify if user request.getMessage().getUsername() exists
                 // TODO store request.getMessage().getPubKeys()
                 // TODO give permission to user request.getMessage().getUsername() on file request.getMessage().getDocumentId()
 
@@ -332,19 +391,25 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
     @Override
     public void login(LoginRequest request, StreamObserver<LoginResponse> responseObserver) {
 
-
         try {
             logger.info(String.format("Received Login Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getCredentials().getUsername(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.getPublicKey("password", "asymmetric_keys"); // TODO should be the users public key
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
 
             if (verifySig && verifyTimestamp) {
                 logger.info("Signature and Timestamp verified.");
 
-                // TODO Verify if user exists
+                //verify user
+                if (!verifyUserPassword(
+                        request.getMessage().getCredentials().getUsername(),
+                        request.getMessage().getCredentials().getPassword())){
+                    responseObserver.onError(Status.UNAUTHENTICATED
+                            .asRuntimeException());
+                    return;
+                }
 
                 String jws = Jwts.builder().
                         setSubject(request.getMessage().getCredentials().getUsername()).
@@ -359,6 +424,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
                 responseObserver.onNext(loginResponse);
                 responseObserver.onCompleted();
+                insertLoginPubKey(request.getMessage().getCredentials().getUsername(), request.getMessage().getClientPubKey());
 
             } else {
                 String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
@@ -378,9 +444,11 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
     public void logout(LogoutRequest request, StreamObserver<LogoutResponse> responseObserver) {
         logger.info("Received Logout request\n");
 
-        System.out.printf(Constants.CLIENT_ID_CONTEXT_KEY.get());  // GET CLIENT USERNAME FORM TOKEN
+        System.out.printf(getLoggedUser());  // GET CLIENT USERNAME FORM TOKEN
 
         responseObserver.onNext(LogoutResponse.newBuilder().build());
         responseObserver.onCompleted();
+
+        deleteLoginPubKey(getLoggedUser());
     }
 }
