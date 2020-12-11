@@ -6,16 +6,21 @@ package pt.tecnico.rrrd.contract;
 service BackupServer {
   rpc Update (UpdateRequest) returns (UpdateResponse) {}
   rpc Restore (RestoreRequest) returns (RestoreResponse) {}
+  rpc GetVersions(GetVersionsRequest) returns (GetVersionsResponse) {}
 }
 
 message Document {
   string documentId = 1;
-  bytes data = 2;
-  string signature = 3;
+  string encryptedDocument = 2;
+}
+
+message UpdateMessage {
+  repeated Document documentList = 1;
+  string timestamp = 3;
 }
 
 message UpdateRequest {
-  repeated Document documentList = 1;
+  UpdateMessage updateMessage = 1;
   string signature = 2;
 }
 
@@ -25,10 +30,30 @@ message UpdateResponse {
 }
 
 message RestoreRequest {
-  string signature = 1;
+  int32 version = 1;
+  string signature = 2;
+}
+
+message RestoreMessage{
+  repeated Document documentList = 1;
+  string timestamp = 2;
 }
 
 message RestoreResponse {
-  repeated Document documentList = 1;
+  RestoreMessage restoreMessage = 1;
   string signature = 2;
 }
+
+message GetVersionsRequest {
+}
+
+message Version {
+  int32 number = 1;
+  string date = 2;
+  int32 numberOfFiles = 3;
+}
+
+message GetVersionsResponse {
+  repeated Version versionList = 1;
+}
+

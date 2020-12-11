@@ -8,6 +8,9 @@ import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import io.grpc.StatusRuntimeException;
 import java.io.*;
@@ -15,7 +18,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
-import java.security.Key;
+import java.security.*;
+import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
@@ -108,7 +113,7 @@ public class CommandHandler implements ICommandHandler {
 
             SecretKey secretKey = CryptographicOperations.createDocumentKey();
             AddFileMessage addFileMessage = AddFileMessage.newBuilder().
-                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument("password", "symmetric_key", documentData.getBytes())).
+                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, "symmetric_key", documentData.getBytes())).
                     setDocumentId(addFile.getDocumentId()).
                     setOwnerUsername(Utils.getUserName()).
                     setTimestamp(CryptographicOperations.getTimestamp()).
@@ -122,7 +127,7 @@ public class CommandHandler implements ICommandHandler {
             AddFileResponse addFileResponse = this.blockingStub.addNewFile(addFileRequest); // TODO catch exception that is thrown when an incorrect documentId is specified
             System.out.println("Received response: " + addFileResponse);
 
-            CryptographicOperations.storeDocumentKey("password", addFile.getDocumentId(), secretKey);
+            CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, addFile.getDocumentId(), secretKey);
 
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
@@ -138,55 +143,49 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(AddPermission addPermission) {
         try {
-            AddPermissionMessage.Builder builder = AddPermissionMessage.newBuilder().
+            AddPermissionMessage addPermissionMessage = AddPermissionMessage.newBuilder().
                     setDocumentId(addPermission.getDocumentId()).
-                    setTimestamp(CryptographicOperations.getTimestamp());
-
-            for (String encryptedKey : getPubKeys(addPermission.getUsername(), addPermission.getDocumentId())) {
-                builder.addPubKeys(encryptedKey);
-            }
-
-            AddPermissionMessage addPermissionMessage = builder.build();
+                    setUsername(addPermission.getUsername()).
+                    setTimestamp(CryptographicOperations.getTimestamp()).
+                    addAllPubKeys(getPubKeys(addPermission.getUsername(), addPermission.getDocumentId())).
+                    build();
 
             AddPermissionRequest addPermissionRequest = AddPermissionRequest.newBuilder().
                     setMessage(addPermissionMessage).
                     setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", addPermissionMessage.toByteArray())).
                     build();
-            System.out.println(addPermissionRequest);
-//            AddPermissionResponse addPermissionResponse = this.blockingStub.push(addPermissionRequest);
-//            System.out.println("Received response: " + addPermissionResponse);
+
+            AddPermissionResponse addPermissionResponse = this.blockingStub.addPermission(addPermissionRequest);
+            System.out.println("Received response: " + addPermissionResponse.getMessage());
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
 
-    private List<String> getPubKeys(String username, String documentId) {
+    private List<String> getPubKeys(String username, String documentId) throws UnrecoverableKeyException, CertificateException,
+            NoSuchAlgorithmException, KeyStoreException, IOException, SignatureException, InvalidKeyException, InvalidKeySpecException,
+            NoSuchPaddingException, BadPaddingException, IllegalBlockSizeException {
+
+        GetPubKeysMessage getPubKeysMessage = GetPubKeysMessage.newBuilder().
+                setUsername(username).
+                setTimestamp(CryptographicOperations.getTimestamp()).
+                build();
+
+        GetPubKeysRequest getPubKeysRequest = GetPubKeysRequest.newBuilder().
+                setMessage(getPubKeysMessage).
+                setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", getPubKeysMessage.toByteArray())).
+                build();
+
+        GetPubKeysResponse getPubKeysResponse = this.blockingStub.getPubKeys(getPubKeysRequest);
+
+        Key documentKey = CryptographicOperations.getDocumentKey(RrrdClientApp.keyStorePassword, documentId);
         List<String> keys = new LinkedList<>();
-        try {
-            GetPubKeysMessage getPubKeysMessage = GetPubKeysMessage.newBuilder().
-                    setUsername(username).
-                    setTimestamp(CryptographicOperations.getTimestamp()).
-                    build();
-
-            GetPubKeysRequest getPubKeysRequest = GetPubKeysRequest.newBuilder().
-                    setMessage(getPubKeysMessage).
-                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", getPubKeysMessage.toByteArray())).
-                    build();
-
-            System.out.println(getPubKeysRequest);
-
-//            GetPubKeysResponse getPubKeysResponse = this.blockingStub.push(getPubKeysRequest);
-//            System.out.println("Received response: " + getPubKeysResponse);
-//
-//            Key documentKey = CryptographicOperations.getDocumentKey("password", documentId);
-//            for (String pubKey : getPubKeysResponse.getPubKeysList()) {
-//                byte[] encryptedKey = CryptographicOperations.asymmetricEncrypt(documentKey.getEncoded(),
-//                        CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(pubKey)));
-//                keys.add(Base64.getEncoder().encodeToString(encryptedKey));
-//            }
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+        for (String pubKey : getPubKeysResponse.getPubKeysList()) {
+            byte[] encryptedKey = CryptographicOperations.asymmetricEncrypt(documentKey.getEncoded(),
+                    CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(pubKey)));
+            keys.add(Base64.getEncoder().encodeToString(encryptedKey));
         }
+
         return keys;
     }
 
