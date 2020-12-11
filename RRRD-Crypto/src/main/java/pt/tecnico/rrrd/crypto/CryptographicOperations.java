@@ -195,4 +195,8 @@ public class CryptographicOperations {
         return kf.generatePublic(spec);
     }
 
+    public String getPublicKeyToString(String password, String alias) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
+        return Base64.getEncoder().encodeToString(getPublicKey(password, alias).getEncoded());
+    }
+
 }
