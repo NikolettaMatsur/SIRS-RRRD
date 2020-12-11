@@ -24,6 +24,7 @@ public class CryptographicOperations {
     private static final String ASYMMETRIC_ALGORITHM = "RSA";
     private static int ASYMMETRIC_KEY_SIZE = 2048;
     private static final String SIGN_ALGORITHM = "SHA256withRSA";
+    private static final String HASH_ALGORITHM = "SHA-256";
     public static long FRESHNESS_MAX_INTERVAL = 5000;
 
     public static KeyStore getKeyStore(String password)
@@ -186,5 +187,16 @@ public class CryptographicOperations {
 
     public static String getTimestamp() {
         return String.valueOf(new Timestamp(System.currentTimeMillis()));
+    }
+
+    public static String createMessageDigest(String data) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance(HASH_ALGORITHM);
+        return Base64.getEncoder().encodeToString(md.digest(data.getBytes()));
+    }
+
+    public static boolean verifyMessageDigest(String data, String digest) throws NoSuchAlgorithmException {
+        String computedDigest = createMessageDigest(data);
+
+        return computedDigest.equals(digest);
     }
 }

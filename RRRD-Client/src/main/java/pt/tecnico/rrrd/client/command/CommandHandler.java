@@ -1,5 +1,7 @@
 package pt.tecnico.rrrd.client.command;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import io.grpc.Status;
 import pt.tecnico.rrrd.client.RrrdClientApp;
 import pt.tecnico.rrrd.client.utils.Utils;
@@ -12,6 +14,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.management.InvalidAttributeValueException;
 import javax.naming.AuthenticationException;
 
 import io.grpc.StatusRuntimeException;
@@ -64,9 +67,9 @@ public class CommandHandler implements ICommandHandler {
                     secretKey);
 
             CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, pull.getDocumentId(), secretKey);
-
+            String document = parseDocumentAndHash(decryptedDocument);
             PrintWriter writer = new PrintWriter("/home/" + Utils.getUserName() + "/sync/client/" + pull.getDocumentId() + ".txt", StandardCharsets.UTF_8);
-            writer.println(new String(decryptedDocument));
+            writer.println(document);
             writer.close();
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
@@ -87,11 +90,13 @@ public class CommandHandler implements ICommandHandler {
     public void handle(Push push) throws AuthenticationException {
         try {
 
-            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + push.getDocumentId() + ".txt"), StandardCharsets.UTF_8);
+            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + push.getDocumentId() + ".txt"), StandardCharsets.UTF_8).trim();
+
+            String jsonDocumentAndHash = createDocumentAndHash(documentData);
 
             PushMessage pushMessage = PushMessage.newBuilder().
                     setDocumentId(push.getDocumentId()).
-                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, push.getDocumentId(), documentData.trim().getBytes())).
+                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, push.getDocumentId(), jsonDocumentAndHash.getBytes())).
                     setTimestamp(CryptographicOperations.getTimestamp()).
                     build();
 
@@ -119,13 +124,14 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(AddFile addFile) throws AuthenticationException {
         try {
-            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + addFile.getDocumentId() + ".txt"), StandardCharsets.US_ASCII);
+            String documentData = Files.readString(Paths.get("/home/" + Utils.getUserName() + "/sync/client/" + addFile.getDocumentId() + ".txt"), StandardCharsets.US_ASCII).trim();
+
+            String jsonDocumentAndHash = createDocumentAndHash(documentData);
 
             SecretKey secretKey = CryptographicOperations.createDocumentKey();
             AddFileMessage addFileMessage = AddFileMessage.newBuilder().
-                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, "symmetric_key", documentData.getBytes())).
+                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, "symmetric_key", jsonDocumentAndHash.getBytes())).
                     setDocumentId(addFile.getDocumentId()).
-                    setOwnerUsername(Utils.getUserName()).
                     setTimestamp(CryptographicOperations.getTimestamp()).
                     build();
 
@@ -252,5 +258,25 @@ public class CommandHandler implements ICommandHandler {
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    private String createDocumentAndHash(String documentData) throws NoSuchAlgorithmException {
+        JsonObject documentAndHash = new JsonObject();
+        documentAndHash.addProperty("documentData", documentData);
+        documentAndHash.addProperty("hash", CryptographicOperations.createMessageDigest(documentData));
+
+        return documentAndHash.toString();
+    }
+
+    private String parseDocumentAndHash(byte[] data) throws NoSuchAlgorithmException, InvalidAttributeValueException {
+        String json = new String(data);
+
+        JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
+
+        if(!CryptographicOperations.verifyMessageDigest(jsonObject.get("documentData").getAsString(), jsonObject.get("hash").getAsString())) {
+            throw new InvalidAttributeValueException("Document integrity could not be verified");
+        }
+
+        return jsonObject.get("documentData").getAsString();
     }
 }
