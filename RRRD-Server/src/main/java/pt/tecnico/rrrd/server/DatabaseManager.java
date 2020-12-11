@@ -90,6 +90,29 @@ public class DatabaseManager {
         conn.close();
     }
 
+    public byte[] getSalt(String username) throws SQLException {
+        PreparedStatement stmt = null;
+        ResultSet rst = null;
+        Connection conn = null;
+        byte[] result = null;
+
+        conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+
+        String query = " SELECT salt FROM users WHERE username=?";
+        stmt = conn.prepareStatement(query);
+        stmt.setString(1, username);
+
+        rst = stmt.executeQuery();
+
+        if (rst.next())
+            result = rst.getBytes("salt");
+        //there is always 1 because username is unique as it is primary key
+        rst.close();
+        stmt.close();
+        conn.close();
+        return result;
+    }
+
 
     //to use when altering password through grpc
     public boolean verifyUserPassword(String username, byte[] password) throws SQLException {
@@ -203,6 +226,32 @@ public class DatabaseManager {
         return pubKeys;
     }
 
+    public Integer getPubKeyId(String username, String pubKey) throws SQLException{
+        PreparedStatement stmt = null;
+        Connection conn = null;
+        ResultSet rst = null;
+        Integer result = null;
+
+        conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+        System.out.println("Getting pubKey of user " +  username);
+
+        String query = "SELECT id FROM public_keys WHERE username=? AND pub_key=?";
+
+        stmt = conn.prepareStatement(query);
+        stmt.setString(1, username);
+        stmt.setString(2,pubKey);
+
+        rst = stmt.executeQuery();
+
+        if (rst.next())
+            result = rst.getInt("id");
+
+        stmt.close();
+        conn.close();
+        return result;
+
+    }
+
     public String getPubKey(String username, Integer pub_key_id) throws SQLException{
         PreparedStatement stmt = null;
         Connection conn = null;
@@ -296,6 +345,36 @@ public class DatabaseManager {
         return allowedFiles;
     }
 
+    public boolean verifyOwner(String filename, String username) throws SQLException {
+        PreparedStatement stmt = null;
+        Connection conn = null;
+        ResultSet rst = null;
+        String pubKey;
+        boolean result = false;
+
+        conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+        System.out.println("Verifiyng ownership of user " +  username);
+
+        String query = "SELECT * FROM files WHERE owner=? AND filename=?";
+
+        stmt = conn.prepareStatement(query);
+        stmt.setString(1, username);
+        stmt.setString(2, filename);
+
+        rst = stmt.executeQuery();
+
+       if(rst.next()) {
+            result = true;
+        }
+
+        stmt.close();
+        conn.close();
+
+        return result;
+    }
+
+
+
     /*----------------------------------------PERMISSIONS-----------------------------------------------------*/
 
     public void insertPermission(String filename, String username, Integer pub_key_id, String permission_key) throws SQLException {
@@ -356,6 +435,32 @@ public class DatabaseManager {
 
         if(rst.next()){
             result = true;
+        }
+
+        stmt.close();
+        conn.close();
+        return result;
+    }
+
+    public String getPermissionKey(String filename, String username, Integer pub_key_id) throws SQLException {
+        PreparedStatement stmt = null;
+        Connection conn = null;
+        String result = null;
+        ResultSet rst = null;
+
+        conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+        System.out.println("Getting permission to" + username + " file " + filename);
+
+        String query = "SELECT permission_key FROM permissions WHERE filename=? AND username=? AND pub_key_id=?";
+
+        stmt = conn.prepareStatement(query);
+        stmt.setString(1, filename);
+        stmt.setString(2, username);
+        stmt.setInt(3, pub_key_id);
+        rst = stmt.executeQuery();
+
+        if(rst.next()){
+            result = rst.getString("permission_key");
         }
 
         stmt.close();

@@ -1,20 +1,14 @@
 package pt.tecnico.rrrd.server;
 
 import io.grpc.Server;
-import io.grpc.ServerBuilder;
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
-import io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import pt.tecnico.rrrd.server.command.*;
-import io.grpc.netty.shaded.io.netty.handler.ssl.SslProvider;
-import pt.tecnico.rrrd.contract.RemoteServerGrpc;
 import pt.tecnico.rrrd.server.utils.AuthorizationServerInterceptor;
 
-import javax.net.ssl.SSLException;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.util.HashMap;

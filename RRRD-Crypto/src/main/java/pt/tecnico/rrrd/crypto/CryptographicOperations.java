@@ -95,6 +95,11 @@ public class CryptographicOperations {
         throw new NoSuchElementException("Public key " + keyAlias + " not found");
     }
 
+
+    public static String getStringPubKey(PublicKey pubKey){
+        return Base64.getEncoder().encodeToString(pubKey.getEncoded());
+    }
+
     public static SecretKeySpec secretKey(byte[] key) {
         return new SecretKeySpec(key, SYMMETRIC_ALGORITHM);
     }
