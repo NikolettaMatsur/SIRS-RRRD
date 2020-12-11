@@ -6,6 +6,8 @@ import pt.tecnico.rrrd.contract.*;
 import pt.tecnico.rrrd.crypto.CryptographicOperations;
 import pt.tecnico.rrrd.server.utils.Utils;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -13,10 +15,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.InvalidParameterException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
-import java.util.Base64;
-import java.util.LinkedList;
-import java.util.List;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
+import java.sql.SQLException;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
@@ -26,6 +31,101 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
     public RrrdServerService() throws IOException, ClassNotFoundException {
         this.logger = Logger.getLogger(RrrdServerApp.class.getName());
         this.databaseManager = new DatabaseManager();
+    }
+
+    public boolean addUser(String username, String password) {
+      byte[] salt = getSalt();
+        try {
+            //Hashing and salting password
+            byte[] hashedPw = getHashedAndSaltedPassword(password, salt);
+            if (hashedPw == null) return false;
+
+            databaseManager.insertUser(username, hashedPw, salt);
+        } catch (SQLException e) {
+            logger.info(String.format("Error creating user %s : %s, error code: %s\n", username, e.getMessage(), e.getErrorCode()));
+            return false;
+        }
+        return true;
+    }
+
+    public boolean updateUserPassword(String username, String newPassword){
+        byte[] salt = getSalt();
+        try {
+            byte[] hashedPw = getHashedAndSaltedPassword(newPassword, salt);
+            if (hashedPw == null) return false;
+
+            databaseManager.updateUserPassword(username, hashedPw, salt);
+        } catch (SQLException e) {
+            logger.info(String.format("Error updating user's %s password: %s, error code: %s\n", username, e.getMessage(), e.getErrorCode()));
+            return false;
+        }
+        return true;
+    }
+
+    public boolean deleteUser(String username) {
+        try {
+            databaseManager.deleteUser(username);
+        } catch (SQLException e) {
+            logger.info(String.format("Error deleting user %s : %s, error code: %s\n", username, e.getMessage(), e.getErrorCode()));
+            return false;
+        }
+        return true;
+    }
+
+    private byte[] getSalt(){
+        //generating salt
+        SecureRandom random = new SecureRandom();
+        byte[] salt = new byte[16];
+        random.nextBytes(salt);
+        return salt;
+    }
+
+    private byte[] getHashedAndSaltedPassword(String password, byte[] salt){
+        try {
+            //Hashing and salting password
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 65536, 128);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+
+            byte[] hashedPw = factory.generateSecret(spec).getEncoded();
+            return hashedPw;
+        } catch (InvalidKeySpecException e) {
+            logger.info(String.format("KeySpec error: %s \n", e.getMessage()));
+        } catch (NoSuchAlgorithmException e){
+            logger.info(String.format("Algorithm is no supported anymore: %s\n", e.getMessage()));
+        }
+        return null;
+    }
+
+
+    public boolean addPubKey(String username, String pubKey){
+        try {
+            databaseManager.insertPubKey(username, pubKey);
+        } catch (SQLException e) {
+            logger.info(String.format("Error adding pubKey to user %s : %s, error code: %s\n", username, e.getMessage(), e.getErrorCode()));
+            return false;
+        }
+        return true;
+    }
+
+    public Map<Integer, String> getUserPubKeys(String username) {
+        Map<Integer, String> pubKeys = new HashMap<>();
+        try{
+            pubKeys = databaseManager.getPubKeys(username);
+
+        } catch (SQLException e){
+            logger.info(String.format("Error getting user %s pubKeys: %s, error code: %s\n", username, e.getMessage(), e.getErrorCode()));
+        }
+        return pubKeys;
+    }
+
+    public boolean deletePubKey(String username, Integer pubKeyId){
+        try {
+            databaseManager.deletePubKey(username, pubKeyId);
+        } catch (SQLException e) {
+            logger.info(String.format("Error deleting pubKey of user %s : %s, error code: %s\n", username, e.getMessage(), e.getErrorCode()));
+            return false;
+        }
+        return true;
     }
 
     @Override
