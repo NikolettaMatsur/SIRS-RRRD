@@ -43,7 +43,10 @@ public class RrrdClientApp {
     }
 
     public ManagedChannel initialize(String address, int port) throws SSLException, URISyntaxException {
-        ManagedChannel channel = NettyChannelBuilder.forAddress(address, port).sslContext(getSslContextBuilder().build()).build();
+        ManagedChannel channel = NettyChannelBuilder.forAddress(address, port)
+                .sslContext(getSslContextBuilder().build())
+                .overrideAuthority("localhost")
+                .build();
         this.blockingStub = RemoteServerGrpc.newBlockingStub(channel);
         this.asyncStub = RemoteServerGrpc.newStub(channel);
         return channel;
