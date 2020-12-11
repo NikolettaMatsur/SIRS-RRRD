@@ -7,6 +7,7 @@ service RemoteServer {
   rpc Pull (PullRequest) returns (PullResponse) {}
   rpc Push (PushRequest) returns (PushResponse) {}
   rpc AddNewFile (AddFileRequest) returns (AddFileResponse) {}
+  rpc DeleteFile (DeleteFileRequest) returns (DeleteFileResponse) {}
   rpc GetPubKeys (GetPubKeysRequest) returns (GetPubKeysResponse) {}
   rpc AddPermission (AddPermissionRequest) returns (AddPermissionResponse) {}
   rpc Login (LoginRequest) returns (LoginResponse) {}
@@ -56,6 +57,18 @@ message AddFileMessage {
 
 message AddFileResponse {
   string message = 1;
+}
+
+message DeleteFileRequest{
+  DeleteMessage message = 1;
+  string signature = 2;
+}
+
+message DeleteMessage{
+  string documentId = 1;
+}
+
+message DeleteFileResponse{
 }
 
 message GetPubKeysRequest {
