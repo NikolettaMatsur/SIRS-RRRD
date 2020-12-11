@@ -4,6 +4,7 @@ import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import pt.tecnico.rrrd.client.command.*;
+import pt.tecnico.rrrd.client.utils.JwtCallCredential;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerStub;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc.RemoteServerBlockingStub;
@@ -31,6 +32,7 @@ public class RrrdClientApp {
     private final ManagedChannel channel;
 
     public static String keyStorePassword;
+    public static JwtCallCredential jwtCallCredential = new JwtCallCredential();
 
     public RrrdClientApp(String address, int port) throws SSLException, URISyntaxException {
         this.logger = Logger.getLogger(RrrdClientApp.class.getName());
@@ -44,7 +46,7 @@ public class RrrdClientApp {
 
     public ManagedChannel initialize(String address, int port) throws SSLException, URISyntaxException {
         ManagedChannel channel = NettyChannelBuilder.forAddress(address, port).sslContext(getSslContextBuilder().build()).build();
-        this.blockingStub = RemoteServerGrpc.newBlockingStub(channel);
+        this.blockingStub = RemoteServerGrpc.newBlockingStub(channel).withCallCredentials(jwtCallCredential);
         this.asyncStub = RemoteServerGrpc.newStub(channel);
         return channel;
     }
@@ -90,6 +92,8 @@ public class RrrdClientApp {
             throw new AuthenticationException("\nIncorrect keyStore password!");
         }
 
+        jwtCallCredential.setJwt(login.getToken());
+
         System.out.println("\nSuccessfully logged in!\n");
     }
 
@@ -130,6 +134,8 @@ public class RrrdClientApp {
                     case "add_permission":
                         command = new AddPermission(commandInput);
                         break;
+                    case "logout":
+                        new Logout().accept(commandHandler);
                     case "quit":
                     case "q":
                     case "exit":

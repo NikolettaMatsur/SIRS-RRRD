@@ -8,6 +8,7 @@ import io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslProvider;
 import pt.tecnico.rrrd.contract.RemoteServerGrpc;
+import pt.tecnico.rrrd.server.utils.AuthorizationServerInterceptor;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
@@ -36,6 +37,7 @@ public class  RrrdServerApp {
     public Server initialize(String address, int port) throws SSLException, URISyntaxException {
 
         return NettyServerBuilder.forAddress(new InetSocketAddress(address, port))
+                .intercept(new AuthorizationServerInterceptor())
                 .addService(new RrrdServerService())
                 .sslContext(getSslContextBuilder().build())
                 .build();

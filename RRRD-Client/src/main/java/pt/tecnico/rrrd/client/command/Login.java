@@ -5,6 +5,7 @@ public class Login implements ICommand {
     private String username;
     private String password;
     private boolean loggedIn;
+    private String token;
 
     public Login(String username, String password) {
         this.username = username;
@@ -24,8 +25,19 @@ public class Login implements ICommand {
         return loggedIn;
     }
 
+    public String getToken() {
+        return token;
+    }
+
     @Override
     public void accept(ICommandHandler commandHandler) {
-        this.loggedIn = commandHandler.handle(this);
+        String token = commandHandler.handle(this);
+
+        if (token != null) {
+            this.loggedIn = true;
+            this.token = token;
+        } else {
+            this.loggedIn = false;
+        }
     }
 }

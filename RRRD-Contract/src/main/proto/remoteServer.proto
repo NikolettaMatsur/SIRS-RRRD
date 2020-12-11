@@ -9,6 +9,8 @@ service RemoteServer {
   rpc AddNewFile (AddFileRequest) returns (AddFileResponse) {}
   rpc GetPubKeys (GetPubKeysRequest) returns (GetPubKeysResponse) {}
   rpc AddPermission (AddPermissionRequest) returns (AddPermissionResponse) {}
+  rpc Login (LoginRequest) returns (LoginResponse) {}
+  rpc Logout (LogoutRequest) returns (LogoutResponse) {}
 }
 
 message PullRequest {
@@ -104,7 +106,7 @@ message LoginCredentials {
 }
 
 message LoginResponse {
-
+  string token = 1;
 }
 
 message LogoutRequest {
