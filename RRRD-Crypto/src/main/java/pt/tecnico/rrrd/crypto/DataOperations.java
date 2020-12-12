@@ -42,4 +42,17 @@ public class DataOperations {
         directory.delete();
     }
 
+    public static void deleteTxtDirectory(File directory) {
+        File[] allContents = directory.listFiles();
+        if (allContents != null) {
+            for (File file : allContents) {
+                if (file.getName().length() >= 3 && file.getName().endsWith("txt")){
+                    deleteTxtDirectory(file);
+                    file.delete();
+                }
+            }
+        }
+
+    }
+
 }

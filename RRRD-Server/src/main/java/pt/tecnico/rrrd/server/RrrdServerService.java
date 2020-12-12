@@ -317,7 +317,6 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 logger.info("Signature and Timestamp verified.");
 
                 Map<Integer,String> pubKeysMap =  databaseManager.getPubKeys(request.getMessage().getUsername());
-                List<String> pubKeys = new ArrayList<>(pubKeysMap.values());
 
                 GetPubKeysResponse getPubKeysResponse = GetPubKeysResponse.newBuilder().
                         putAllPubKeys(pubKeysMap).
