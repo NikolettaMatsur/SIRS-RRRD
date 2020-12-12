@@ -85,7 +85,7 @@ Create the ```currentVersion.txt``` file in ```<project-root>/RRRD-Backup/```
 $ echo 0 > ./currentVersion.txt
 ```
 
-***Distribute keystore
+Each virtual machine also needs a keystore in the home directory ```~/KeyStore.jks```
 ### Compile the code
 
 The code can be compiled using [Maven](https://maven.apache.org/).
@@ -194,3 +194,10 @@ To delete a file:
 ![delete_file](images/delete.PNG)
 
 ### Backup
+
+To the backupServer:
+
+```bash
+$ cd 
+```
+In server mvn exec:java -Dexec.args="localhost 8080 terminal" -P backup-client
