@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.CertificateException;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Properties;
 import java.util.Scanner;
@@ -197,11 +198,11 @@ public class RrrdBackupClientAPI {
             String dbPassword = prop.getProperty("dbPassword");
 
             String restorePath = Utils.getServerBackupDirectory() + "backup.sql";
-
+            System.out.println(restorePath);
             /*NOTE: Used to create a cmd command*/
             /*NOTE: Do not create a single large string, this will cause buffer locking, use string array*/
 //            String[] executeCmd = new String[]{"mysql", dbname, "-u" + dbUser, "-p" + dbPassword, "-e", " source " + restorePath};
-            String executeCmd = "mysql -u" + dbUser + " -p" + dbPassword + " " + dbname + " -e \"source " + restorePath + "\"";
+            String[] executeCmd = new String[]{"mysql", dbname, "-u" + dbUser, "-p" + dbPassword, "-e", " source " + restorePath};
             /*NOTE: processComplete=0 if correctly executed, will contain other values if not*/
             Process runtimeProcess = Runtime.getRuntime().exec(executeCmd);
             int processComplete = runtimeProcess.waitFor();

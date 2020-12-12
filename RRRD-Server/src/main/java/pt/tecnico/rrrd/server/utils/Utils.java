@@ -1,10 +1,10 @@
 package pt.tecnico.rrrd.server.utils;
 
 public class Utils {
-        static String serverRootDirectory = "C:/sync/";
-//    static String serverRootDirectory = "/home/" + getUserName();
-    static String serverSyncDirectory = serverRootDirectory + "server/sync/";
-    static String serverBackupDirectory = serverRootDirectory + "server/serverDbBackup/";
+//        static String serverRootDirectory = "C:/sync/";
+    static String serverRootDirectory = "/home/" + getUserName();
+    static String serverSyncDirectory = serverRootDirectory + "/sync/server/sync/";
+    static String serverBackupDirectory = serverRootDirectory + "/sync/server/serverDbBackup/";
 
 
     public static String getUserName() {

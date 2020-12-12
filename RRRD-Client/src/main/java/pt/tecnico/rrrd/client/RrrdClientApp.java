@@ -18,6 +18,7 @@ import java.io.File;
 import java.lang.reflect.Array;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 import java.util.Scanner;
 import java.util.logging.Logger;
@@ -77,18 +78,18 @@ public class RrrdClientApp {
     }
 
     private static void login(ICommandHandler commandHandler, Scanner input) throws AuthenticationException {
-        ((CommandHandler) commandHandler).changeRootDirectory("C:/sync/client/");
-        username = "client1";
-        String password = "password";
+//        ((CommandHandler) commandHandler).changeRootDirectory("C:/sync/client/");
 
-//        System.out.println("Insert your credentials");
-//
-//        System.out.print("Username: ");
-//        username = input.nextLine();
-//
-//        System.out.print("Password: ");
-//        String password = new String(System.console().readPassword());
-        keyStorePassword = password;
+        System.out.println("Insert your credentials");
+
+        System.out.print("Username: ");
+        username = input.nextLine();
+
+        System.out.print("Password: ");
+        String password = new String(System.console().readPassword());
+
+        System.out.print("Keystore Password: ");
+        keyStorePassword = new String(System.console().readPassword());
 
         Login login = new Login(username, password);
         login.accept(commandHandler);
@@ -151,6 +152,9 @@ public class RrrdClientApp {
                         break;
                     case "logout":
                         new Logout().accept(commandHandler);
+                    case "get_pub_key":
+                        new PrintPubKeys().accept(commandHandler);
+                        break;
                     case "quit":
                     case "q":
                     case "exit":

@@ -296,6 +296,16 @@ public class CommandHandler implements ICommandHandler {
         }
     }
 
+    @Override
+    public void handle(PrintPubKeys printPubKeys) throws AuthenticationException {
+        try {
+            System.out.println("User public key is: " + Base64.getEncoder().encodeToString(CryptographicOperations.getPublicKey(RrrdClientApp.keyStorePassword, "asymmetric_keys").getEncoded()));
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+    }
+
     private String createDocumentAndHash(String documentData) throws NoSuchAlgorithmException {
         JsonObject documentAndHash = new JsonObject();
         documentAndHash.addProperty("documentData", documentData);
