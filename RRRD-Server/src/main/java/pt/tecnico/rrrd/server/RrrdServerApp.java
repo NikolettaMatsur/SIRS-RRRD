@@ -23,6 +23,7 @@ public class  RrrdServerApp {
     private final Logger logger;
     static String address;
     static int port;
+    static int updateInterval;
     private final String certChainFilePath = "remote.crt";
     private final String privateKeyFilePath = "remote.key";
 
@@ -90,6 +91,7 @@ public class  RrrdServerApp {
 
         address = args[0];
         port = Integer.parseInt(args[1]);
+        updateInterval = Integer.parseInt(args[2]);
         RrrdServerApp serverApp = new RrrdServerApp(address, port);
         serverApp.start();
         ICommandHandler commandHandler = new CommandHandler();

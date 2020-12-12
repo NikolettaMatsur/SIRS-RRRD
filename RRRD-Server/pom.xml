@@ -21,6 +21,7 @@
         <server.port>8090</server.port>
         <server.backupAddress>localhost</server.backupAddress>
         <server.backupPort>8080</server.backupPort>
+        <backup.frequency>5</backup.frequency>
     </properties>
 
 

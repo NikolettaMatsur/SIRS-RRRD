@@ -29,6 +29,7 @@ public class RrrdBackupClientApp {
 
     public RrrdBackupClientApp(String address, int port) throws SSLException, URISyntaxException {
         this.channel = this.initialize(address, port);
+        this.updateInterval = RrrdServerApp.updateInterval;
     }
 
     private SslContextBuilder getSslContextBuilder() throws URISyntaxException {
