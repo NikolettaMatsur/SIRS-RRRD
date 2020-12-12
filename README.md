@@ -224,7 +224,9 @@ Insert version to restore: <Chose the number of the printed avaliable versions>
 ![backup_restored](images/backup_restored.PNG)
 
 ### Run the canary files
- The sys admin must copy the file ```<project-root>/RRRD-Server/canary.sh``` to every folder he wishes to protect and in each of this folders he must execute:
+To run the canary files we must first install ```sudo apt install inotify-tools```
+
+The sys admin must copy the file ```<project-root>/RRRD-Server/canary.sh``` to every folder he wishes to protect and in each of this folders he must execute:
  
  ```bash
  $ cd <folder>
