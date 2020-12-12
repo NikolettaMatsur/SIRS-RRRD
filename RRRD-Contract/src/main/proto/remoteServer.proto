@@ -66,6 +66,7 @@ message DeleteFileRequest{
 
 message DeleteMessage{
   string documentId = 1;
+  string timestamp = 2;
 }
 
 message DeleteFileResponse{

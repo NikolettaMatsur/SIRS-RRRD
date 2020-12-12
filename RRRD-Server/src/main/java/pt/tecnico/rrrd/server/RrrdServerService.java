@@ -454,4 +454,41 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
         deleteLoginPubKey(getLoggedUser());
     }
+
+    @Override
+    public void deleteFile(DeleteFileRequest request, StreamObserver<DeleteFileResponse> responseObserver) {
+        try {
+            logger.info(String.format("Received deleteFile Request: {Username: %s, Timestamp: %s}\n", getLoggedUser(), request.getMessage().getTimestamp()));
+
+            // Verify signature and ts
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
+            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
+
+            if (verifySig && verifyTimestamp) {
+                logger.info("Signature and Timestamp verified.");
+            }
+            String filename = request.getMessage().getDocumentId();
+
+            Files.deleteIfExists(Paths.get(Utils.getFileRepository(filename)));
+
+            if(!databaseManager.verifyOwner(filename, getLoggedUser())){
+                responseObserver.onError(Status.PERMISSION_DENIED
+                        .asRuntimeException());
+            }
+            databaseManager.deleteFile(filename);
+
+            responseObserver.onNext(DeleteFileResponse.newBuilder().build());
+            responseObserver.onCompleted();
+
+        } catch (IOException e) {
+            responseObserver.onError(Status.DATA_LOSS //has to do with file deleteIfExists
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        } catch (Exception e) {
+            responseObserver.onError(Status.INTERNAL
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        }
+    }
 }
