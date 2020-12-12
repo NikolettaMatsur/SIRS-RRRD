@@ -19,4 +19,6 @@ public interface ICommandHandler {
     void handle(DeleteFile deleteFile) throws AuthenticationException;
 
     void handle(RemovePermission removePermission) throws AuthenticationException;
+
+    void handle(PrintPubKeys printPubKeys) throws AuthenticationException;
 }

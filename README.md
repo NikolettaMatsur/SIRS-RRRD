@@ -31,6 +31,8 @@ $ sudo mysql -u root
 mysql> CREATE DATABASE db;
 ```
 
+To create a user:
+
 ```sql
 mysql> CREATE USER '<username>'@'localhost' IDENTIFIED BY '<password>';
 ```
@@ -38,24 +40,102 @@ mysql> CREATE USER '<username>'@'localhost' IDENTIFIED BY '<password>';
 ```sql
 mysql> GRANT ALL PRIVILEGES ON db.* TO '<username>'@'localhost';
 ```
-***
+
+Create a ```database.properties``` file in ```<project-root>/RRRD-Server/src/main/java/pt/tecnico/rrrd/server/database with the following```:
+
+```text
+#Database Properties
+jdbcDriver=com.mysql.cj.jdbc.Driver
+dbUrl=jdbc:mysql://localhost:3306/db
+dbUser=<username>
+dbPassword=<password>
+```
+
+Where ```<username>``` and ```<password>``` should be replaced by the username and password of the previously created database user.
+
 Populate the database:
 
+```bash
+$ cd <project-root>/RRRD-Server/src/main/java/pt/tecnico/rrrd/server/database
+$ mysql -u <username> -p db < populate_server.sql
+```
 
 ### Create the necessary folder structure
-create folders in backup****
-create folders in client****
+Create the client folder structure:
 
+```bash
+$ mkdir -p ~/sync/client/
+```
+
+Create the server folder structure:
+```bash
+$ mkdir -p ~/sync/server/sync/
+$ mkdir -p ~/sync/server/serverDbBackup/
+```
+
+Create the backup server folder structure:
+
+```bash
+$ mkdir ~/backup/
+```
+
+Create the ```currentVersion.txt``` file in ```<project-root>/RRRD-Backup/```
+
+```bash
+$ echo 0 > ./currentVersion.txt
+```
+
+***Distribute keystore
 ### Compile the code
 
 The code can be compiled using [Maven](https://maven.apache.org/).
-To do so at the root of the project <project-root> run:
+To do so at the root of the project ```<project-root>``` run:
 
 ```bash
 $ mvn clean install
 ```
 
 ## Run Project
-### Client
 ### Server
+
+To run the server:
+
+```bash
+$ cd <project-root>/RRRD-Server
+$ mvn exec:java
+```
+
+To add new user:
+
+```bash
+> add_user
+Username: client1
+Password: client1
+```
+Then the user needs to provide his public key to the system admin that can add it to the server by running:
+
+```bash
+> add_pub_key
+Username: client1
+Pubkey: <The public key obtained bu running the get_pub_key in the client>
+```
+
+![add_pub_key](images/add_pub_key.PNG)
+
+### Client
+
+To run the server:
+
+```bash
+$ cd <project-root>/RRRD-Client
+$ mvn exec:java
+```
+
+To login:
+```bash
+Username: client1
+Password: client1
+Keystore Password: password
+```
+
 ### Backup
