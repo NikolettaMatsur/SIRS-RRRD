@@ -21,6 +21,9 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
     private final Logger logger;
     private final int MAX_VERSIONS = 2;
     private static String keyStorePassword;
+    //static String backupSaveDirectory = "C:/sync/backup/";
+    static String backupSaveDirectory = "/home/" + System.getProperty("user.name") + "/backup/";
+
 
     public RrrdBackupService(String keyStorePassword) {
         this.logger = Logger.getLogger(RrrdBackupService.class.getName());
@@ -62,27 +65,27 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
         updateCurrentVersion(version);
 
         if (version > MAX_VERSIONS) {
-            File oldDirectory = new File("versions/" + (version - MAX_VERSIONS) + "/");
+            File oldDirectory = new File(backupSaveDirectory + "versions/" + (version - MAX_VERSIONS) + "/");
             if (oldDirectory.exists()) {
                 DataOperations.deleteDirectory(oldDirectory);
-                File metaData = new File("versions/" + (version - MAX_VERSIONS) + ".txt");
+                File metaData = new File(backupSaveDirectory + "versions/" + (version - MAX_VERSIONS) + ".txt");
                 metaData.delete();
-                File dbBackup = new File("versions/" + (version - MAX_VERSIONS) + ".sql");
+                File dbBackup = new File(backupSaveDirectory + "versions/" + (version - MAX_VERSIONS) + ".sql");
                 dbBackup.delete();
             }
         }
 
-        File directory = new File("versions/" + version + "/");
+        File directory = new File(backupSaveDirectory + "versions/" + version + "/");
         directory.mkdirs();
         for (Document document : updateMessage.getDocumentListList()) {
-            DataOperations.writeFile("versions/" + version + "/" + document.getDocumentId(), document.getEncryptedDocument());
+            DataOperations.writeFile(backupSaveDirectory + "versions/" + version + "/" + document.getDocumentId(), document.getEncryptedDocument());
         }
 
         String metaData = updateMessage.getTimestamp() + "\n" + updateMessage.getDocumentListCount();
-        DataOperations.writeFile("versions/" + version + ".txt", metaData);
+        DataOperations.writeFile(backupSaveDirectory + "versions/" + version + ".txt", metaData);
 
         String dbBackup = updateMessage.getDbBackup().getEncryptedDocument();
-        DataOperations.writeFile("versions/" + version + ".sql", dbBackup);
+        DataOperations.writeFile(backupSaveDirectory + "versions/" + version + ".sql", dbBackup);
 
         UpdateResponse updateResponse = UpdateResponse.newBuilder().setStatus("OK").setSignature("0").build();
 
@@ -106,7 +109,7 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
             return;
         }
 
-        File dir = new File("versions/" + requestedVersion + "/");
+        File dir = new File(backupSaveDirectory + "versions/" + requestedVersion + "/");
         File[] directoryListing = dir.listFiles();
         if (directoryListing != null) {
             this.logger.info(String.format("Sending new restore response for %d files.", directoryListing.length));
@@ -118,7 +121,7 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
         }
         String dbBackupString = null;
         try {
-            dbBackupString = Files.readString(Path.of("versions/" + requestedVersion + ".sql"), StandardCharsets.ISO_8859_1);
+            dbBackupString = Files.readString(Path.of(backupSaveDirectory + "versions/" + requestedVersion + ".sql"), StandardCharsets.ISO_8859_1);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -154,7 +157,7 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
         //this.logger.info(String.format("Sending new update request for %d files.", directoryListing.length));
         GetVersionsResponse.Builder getVersionResponseBuilder = GetVersionsResponse.newBuilder();
 
-        File dir = new File("versions");
+        File dir = new File(backupSaveDirectory + "versions");
         File[] directoryListing = dir.listFiles();
         if (directoryListing != null) {
             for (File child : directoryListing) {

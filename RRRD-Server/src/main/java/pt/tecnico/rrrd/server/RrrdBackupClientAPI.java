@@ -22,7 +22,7 @@ import java.util.Base64;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.logging.Logger;
-
+import pt.tecnico.rrrd.server.utils.Utils;
 
 public class RrrdBackupClientAPI {
 
@@ -52,7 +52,7 @@ public class RrrdBackupClientAPI {
     public void update() throws IOException, CertificateException, UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException, SignatureException, InvalidKeyException {
 
         UpdateMessage.Builder updateMessageBuilder = UpdateMessage.newBuilder();
-        File dir = new File("sync");
+        File dir = new File(Utils.getServerSyncDirectory());
         File[] directoryListing = dir.listFiles();
         if (directoryListing != null) {
             this.logger.info(String.format("Sending new update request for %d files.", directoryListing.length));
@@ -123,22 +123,17 @@ public class RrrdBackupClientAPI {
             return;
         }
 
-        File new_directory = new File("sync_new/");
-        new_directory.mkdir();
+        File directory = new File(Utils.getServerSyncDirectory());
+        directory.mkdir();
+        DataOperations.deleteTxtDirectory(directory);
         for (Document document : restoreMessage.getDocumentListList()) {
-            DataOperations.writeFile("sync_new/" + document.getDocumentId(), document.getEncryptedDocument());
+            DataOperations.writeFile(Utils.getServerSyncDirectory()+ document.getDocumentId(), document.getEncryptedDocument());
         }
-        File new_backup_directory = new File("backup_new/");
-        new_backup_directory.mkdir();
-        DataOperations.writeFile("backup_new/" + restoreMessage.getDbBackup().getDocumentId(), restoreMessage.getDbBackup().getEncryptedDocument());
+        File backup_directory = new File(Utils.getServerBackupDirectory());
+        DataOperations.deleteDirectory(backup_directory);
+        backup_directory.mkdir();
+        DataOperations.writeFile(Utils.getServerBackupDirectory() + restoreMessage.getDbBackup().getDocumentId(), restoreMessage.getDbBackup().getEncryptedDocument());
 
-        File old_directory = new File("sync/");
-        DataOperations.deleteDirectory(old_directory);
-        new_directory.renameTo(new File("sync/"));
-
-        File old_backup_directory = new File("backup/");
-        DataOperations.deleteDirectory(old_backup_directory);
-        new_backup_directory.renameTo(new File("backup/"));
         restoreDatabase();
 
 
@@ -159,11 +154,11 @@ public class RrrdBackupClientAPI {
 
             /*NOTE: Creating Path Constraints for folder saving*/
             /*NOTE: Here the backup folder is created for saving inside it*/
-            String folderPath = "backup/";
+            String folderPath = Utils.getServerBackupDirectory();
 
             /*NOTE: Creating Folder if it does not exist*/
             File f1 = new File(folderPath);
-            f1.mkdir();
+            f1.mkdirs();
             String savePath = folderPath + "backup.sql";
             /*NOTE: Creating Path Constraints for backup saving*/
             /*NOTE: Here the backup is saved in a folder called backup with the name backup.sql*/
@@ -201,7 +196,7 @@ public class RrrdBackupClientAPI {
             String dbUser = prop.getProperty("dbUser");
             String dbPassword = prop.getProperty("dbPassword");
 
-            String restorePath = "backup/backup.sql";
+            String restorePath = Utils.getServerBackupDirectory() + "backup.sql";
 
             /*NOTE: Used to create a cmd command*/
             /*NOTE: Do not create a single large string, this will cause buffer locking, use string array*/
