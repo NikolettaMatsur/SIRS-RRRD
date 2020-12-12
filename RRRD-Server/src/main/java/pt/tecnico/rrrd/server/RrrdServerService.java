@@ -320,7 +320,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 List<String> pubKeys = new ArrayList<>(pubKeysMap.values());
 
                 GetPubKeysResponse getPubKeysResponse = GetPubKeysResponse.newBuilder().
-                        addAllPubKeys(pubKeys).
+                        putAllPubKeys(pubKeysMap).
                         build();
 
                 responseObserver.onNext(getPubKeysResponse);
