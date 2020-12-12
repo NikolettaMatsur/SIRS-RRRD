@@ -20,15 +20,15 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
 
     private final String currentVersionPath = "currentVersion.txt";
     private final Logger logger;
-    private final int MAX_VERSIONS = 2;
+    private int MAX_VERSIONS = 1;
     private static String keyStorePassword;
-    //static String backupSaveDirectory = "C:/sync/backup/";
     static String backupSaveDirectory = "/home/" + System.getProperty("user.name") + "/backup/";
 
 
     public RrrdBackupService(String keyStorePassword) {
         this.logger = Logger.getLogger(RrrdBackupService.class.getName());
         this.keyStorePassword = keyStorePassword;
+        this.MAX_VERSIONS = RrrdBackupApp.max_versions;
     }
 
 

@@ -471,7 +471,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                         .asRuntimeException());
                 return;
             }
-            
+
             databaseManager.deletePermission(filename, getLoggedUser());
 
             responseObserver.onNext(RemovePermissionResponse.newBuilder().build());
