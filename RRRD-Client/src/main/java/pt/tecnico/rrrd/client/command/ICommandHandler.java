@@ -15,4 +15,6 @@ public interface ICommandHandler {
     String handle(Login login);
 
     void handle(Logout logout) throws AuthenticationException;
+
+    void handle(DeleteFile deleteFile) throws AuthenticationException;
 }

@@ -258,10 +258,36 @@ public class CommandHandler implements ICommandHandler {
     @Override
     public void handle(Logout logout) throws AuthenticationException {
         try {
-            System.out.println("123");
             LogoutResponse logoutResponse = this.blockingStub.logout(LogoutRequest.newBuilder().build());
-            System.out.println("abc");
         } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
+                throw new AuthenticationException("Token expired please login again.");
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    @Override
+    public void handle(DeleteFile deleteFile) throws AuthenticationException {
+        try {
+            DeleteMessage deleteMessage = DeleteMessage.newBuilder().
+                    setDocumentId(deleteFile.getDocumentId()).
+                    setTimestamp(CryptographicOperations.getTimestamp()).
+                    build();
+
+            DeleteFileRequest deleteFileRequest = DeleteFileRequest.newBuilder().
+                    setMessage(deleteMessage).
+                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", deleteMessage.toByteArray())).
+                    build();
+
+            DeleteFileResponse deleteFileResponse = this.blockingStub.deleteFile(deleteFileRequest);
+
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
+                System.err.println(e.getMessage());
+            }
+
             if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
                 throw new AuthenticationException("Token expired please login again.");
             }
