@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 public class RrrdBackupClientApp {
 
-    private static int updateInterval = 5; //in seconds
+    private int updateInterval = 5; //in seconds
 
     private BackupServerBlockingStub blockingStub;
     private BackupServerStub asyncStub;
@@ -29,6 +29,7 @@ public class RrrdBackupClientApp {
 
     public RrrdBackupClientApp(String address, int port) throws SSLException, URISyntaxException {
         this.channel = this.initialize(address, port);
+        this.updateInterval = RrrdServerApp.updateInterval;
     }
 
     private SslContextBuilder getSslContextBuilder() throws URISyntaxException {
@@ -50,14 +51,14 @@ public class RrrdBackupClientApp {
 
         if (args.length < 3) {
             System.err.println("Argument(s) missing!");
-            System.err.printf("Usage: java %s host port mode\nAvailable modes: terminal, auto", RrrdBackupClientApp.class.getName());
+            System.err.printf("Usage: java %s host port mode updateFrequency\nAvailable modes: terminal, auto", RrrdBackupClientApp.class.getName());
             return;
         }
 
         final String address = args[0];
         final int port = Integer.parseInt(args[1]);
         final String mode = args[2];
-
+        int updateInterval = Integer.parseInt(args[3]);
         RrrdBackupClientApp client = new RrrdBackupClientApp(address, port);
         RrrdBackupClientAPI clientAPI = new RrrdBackupClientAPI(client.blockingStub, client.asyncStub, keyStorePassword);
 

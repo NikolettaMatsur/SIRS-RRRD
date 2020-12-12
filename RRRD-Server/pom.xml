@@ -21,6 +21,8 @@
         <server.port>8090</server.port>
         <server.backupAddress>localhost</server.backupAddress>
         <server.backupPort>8080</server.backupPort>
+        <backup.defaultMode>auto</backup.defaultMode>
+        <backup.frequency>5</backup.frequency>
     </properties>
 
 
@@ -96,6 +98,8 @@
                     <arguments>
                         <argument>${server.address}</argument>
                         <argument>${server.port}</argument>
+                        <argument>${backup.defaultMode}</argument>
+                        <argument>${backup.frequency}</argument>
                     </arguments>
                 </configuration>
             </plugin>
@@ -104,9 +108,20 @@
 
     <profiles>
         <profile>
-            <id>backup-client</id>
+            <id>backup-client-auto</id>
             <properties>
                 <server.mainClass>pt.tecnico.rrrd.server.RrrdBackupClientApp</server.mainClass>
+                <server.port>${server.backupPort}</server.port>
+                <backup.defaultMode>auto</backup.defaultMode>
+
+            </properties>
+        </profile>
+        <profile>
+            <id>backup-client-terminal</id>
+            <properties>
+                <server.mainClass>pt.tecnico.rrrd.server.RrrdBackupClientApp</server.mainClass>
+                <server.port>${server.backupPort}</server.port>
+                <backup.defaultMode>terminal</backup.defaultMode>
             </properties>
         </profile>
     </profiles>

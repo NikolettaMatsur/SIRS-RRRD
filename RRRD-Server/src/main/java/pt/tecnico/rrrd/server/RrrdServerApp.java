@@ -23,6 +23,7 @@ public class  RrrdServerApp {
     private final Logger logger;
     static String address;
     static int port;
+    static int updateInterval;
     private final String certChainFilePath = "remote.crt";
     private final String privateKeyFilePath = "remote.key";
 

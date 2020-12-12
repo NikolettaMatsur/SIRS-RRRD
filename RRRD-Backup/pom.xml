@@ -18,6 +18,7 @@
     <properties>
         <server.address>localhost</server.address>
         <server.port>8080</server.port>
+        <backup.versions>2</backup.versions>
         <netty.tcnative.version>2.0.31.Final</netty.tcnative.version>
     </properties>
 
@@ -77,6 +78,7 @@
                     <arguments>
                         <argument>${server.address}</argument>
                         <argument>${server.port}</argument>
+                        <argument>${backup.versions}</argument>
                     </arguments>
                 </configuration>
             </plugin>
