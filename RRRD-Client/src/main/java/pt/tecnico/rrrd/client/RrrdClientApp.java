@@ -78,7 +78,7 @@ public class RrrdClientApp {
     }
 
     private static void login(ICommandHandler commandHandler, Scanner input) throws AuthenticationException {
-        ((CommandHandler) commandHandler).changeRootDirectory("C:/sync/client/");
+//        ((CommandHandler) commandHandler).changeRootDirectory("C:/sync/client/");
 
         System.out.println("Insert your credentials");
 

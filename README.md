@@ -122,9 +122,11 @@ Pubkey: <The public key obtained bu running the get_pub_key in the client>
 
 ![add_pub_key](images/add_pub_key.PNG)
 
+Now that we have a user in the registered in the server we can run some commands in the client
+
 ### Client
 
-To run the server:
+To run the client:
 
 ```bash
 $ cd <project-root>/RRRD-Client
@@ -132,10 +134,63 @@ $ mvn exec:java
 ```
 
 To login:
+
 ```bash
 Username: client1
 Password: client1
 Keystore Password: password
 ```
+
+To get the public key of the logged in user:
+
+```bash
+> get_pub_key
+```
+
+To add a new file first we need to create a new file in ```~/sync/client/```:
+
+```bash
+$ cd ~/sync/client/
+$ echo abcdTest > ./file.txt
+```
+
+Then to store the file in the server the user needs to login into the client application and run:
+
+```bash
+> add_file file
+```
+![add_file](images/add_file.PNG)
+
+After altering ```~/sync/client/file.txt``` to push is to the server:
+
+```bash
+> push file
+```
+
+![push_file](images/push.PNG)
+
+For simplicity to demonstrate the pull functionality delete the previously added file ```~/sync/client/``` and then pull it from the server:
+
+```bash
+> rm ~/sync/client/file.txt
+```
+
+Then login into the client application and run:
+
+```bash
+> pull file
+```
+
+![pull_file](images/pull.PNG)
+
+As we can se in the previous image, the contents of the file are equal to the data that was in the file when the last push was executed.
+
+To delete a file:
+
+```bash
+> delete_file file
+```
+
+![delete_file](images/delete.PNG)
 
 ### Backup
