@@ -2,8 +2,8 @@ Instituto Superior Técnico, Universidade de Lisboa
 
 **Network and Computer Security**
 
-#Project - Ransomware Resistant Remote Documents
-##Group 44
+# Project - Ransomware Resistant Remote Documents
+## Group 44
 
 ## Required platform
 The required platform to run this project is Linux 64-bit, Ubuntu 20.04.1 LTS, Java 11 and MySQL.
@@ -85,7 +85,6 @@ Create the ```currentVersion.txt``` file in ```<project-root>/RRRD-Backup/```
 $ echo 0 > ./currentVersion.txt
 ```
 
-Each virtual machine also needs a keystore in the home directory ```~/KeyStore.jks```
 ### Compile the code
 
 The code can be compiled using [Maven](https://maven.apache.org/).
@@ -195,9 +194,43 @@ To delete a file:
 
 ### Backup
 
-To the backupServer:
+To run tge backup server:
 
 ```bash
-$ cd 
+$ cd <project-root>/RRRD-Backup
+$ mvn exec:java
 ```
-In server mvn exec:java -Dexec.args="localhost 8080 terminal" -P backup-client
+
+Run the server so that the backups are created periodically:
+
+```bash
+$ cd <project-root>/RRRD-Server
+$ mvn exec:java -P backup-client-auto
+```
+
+![backup_run](images/backup_run.PNG)
+
+To test the recovery of files from the backup we deleted the previous backed up file
+
+![backup_delete](images/backup_delete_file.PNG)
+
+To restore the deleted file from the backup stop the execution started by the command ```mvn exec:java -Dexec.args="localhost 8080 auto" -P backup-client``` and run:
+
+```bash
+$ cd <project-root>/RRRD-Server
+$ mvn exec:java -P backup-client-terminal
+Insert version to restore: <Chose the number of the printed avaliable versions>
+```
+![backup_restored](images/backup_restored.PNG)
+
+### Run the canary files
+ The sys admin must copy the file ```<project-root>/RRRD-Server/canary.sh``` to every folder he wishes to protect and in each of this folders he must execute:
+ 
+ ```bash
+ $ cd <folder>
+ $ ./canary.sh
+ ```
+
+![canary](images/canary.PNG)
+
+As we can see, when a file without the .txt extention is added/updated to a folder where a canary file is present, it is interpreted as an illegal operation and so the machine is shutdown.
