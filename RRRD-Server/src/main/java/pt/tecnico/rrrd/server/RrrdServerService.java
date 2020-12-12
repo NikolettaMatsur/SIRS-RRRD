@@ -166,7 +166,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received Pull Request: {Document Id: %s, Timestamp: %s}\n", request.getMessage().getDocumentId(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
             if (verifySig && verifyTimestamp) {
@@ -220,7 +220,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
             logger.info(String.format("Received Push Request: {Document Id: %s, Timestamp: %s}\n", pushMessage.getDocumentId(), pushMessage.getTimestamp()));
 
-            publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
+            publicKey = CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, pushMessage.toByteArray(), signature);
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(pushMessage.getTimestamp());
             if (!verifySig || !verifyTimestamp) {
@@ -263,7 +263,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received AddNewFile Request: {Document Id: %s, Timestamp: %s}\n", request.getMessage().getDocumentId(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
             boolean fileExits = new File(Utils.getFileRepository(request.getMessage().getDocumentId())).isFile();
@@ -309,7 +309,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received GetPubKeys Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getUsername(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey =  CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
+            PublicKey publicKey =  CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
 
@@ -345,7 +345,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received AddPermission Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getUsername(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
 
@@ -462,7 +462,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
             logger.info(String.format("Received deleteFile Request: {Username: %s, Timestamp: %s}\n", getLoggedUser(), request.getMessage().getTimestamp()));
 
             // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
             boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
             boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
 
