@@ -300,6 +300,33 @@ public class CommandHandler implements ICommandHandler {
         }
     }
 
+    @Override
+    public void handle(RemovePermission removePermission) throws AuthenticationException {
+        try {
+            logger.info("Remove permission request sent");
+
+            RemovePermissionMessage removePermissionMessage = RemovePermissionMessage.newBuilder().
+                    setDocumentId(removePermission.getDocumentId()).
+                    setUsername(removePermission.getUsername()).
+                    setTimestamp(CryptographicOperations.getTimestamp()).
+                    build();
+
+            RemovePermissionRequest removePermissionRequest = RemovePermissionRequest.newBuilder().
+                    setMessage(removePermissionMessage).
+                    setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", removePermissionMessage.toByteArray())).
+                    build();
+
+            this.blockingStub.removePermission(removePermissionRequest);
+            logger.info("Remove permission donne");
+        } catch (StatusRuntimeException e) {
+            if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
+                throw new AuthenticationException("Token expired please login again.");
+            }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
     private String createDocumentAndHash(String documentData) throws NoSuchAlgorithmException {
         JsonObject documentAndHash = new JsonObject();
         documentAndHash.addProperty("documentData", documentData);

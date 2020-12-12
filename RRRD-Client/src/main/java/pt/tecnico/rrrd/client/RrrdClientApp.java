@@ -146,6 +146,9 @@ public class RrrdClientApp {
                     case "add_permission":
                         command = new AddPermission(commandInput);
                         break;
+                    case "remove_permission":
+                        command = new RemovePermission(commandInput);
+                        break;
                     case "logout":
                         new Logout().accept(commandHandler);
                     case "quit":
