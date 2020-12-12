@@ -134,6 +134,9 @@ public class RrrdClientApp {
                     case "add_file":
                         command = new AddFile(commandInput);
                         break;
+                    case "delete_file":
+                        command = new DeleteFile(commandInput);
+                        break;
                     case "add_permission":
                         command = new AddPermission(commandInput);
                         break;

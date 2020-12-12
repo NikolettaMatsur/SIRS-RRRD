@@ -318,7 +318,8 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
                 Map<Integer,String> pubKeysMap =  databaseManager.getPubKeys(request.getMessage().getUsername());
 
-                GetPubKeysResponse getPubKeysResponse = GetPubKeysResponse.newBuilder().
+
+               GetPubKeysResponse getPubKeysResponse = GetPubKeysResponse.newBuilder().
                         putAllPubKeys(pubKeysMap).
                         build();
 
@@ -353,11 +354,16 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 String filename = request.getMessage().getDocumentId();
                 try {
                     if (!databaseManager.verifyOwner(filename, getLoggedUser())){
-                        //todo
+                        responseObserver.onError(Status.PERMISSION_DENIED
+                                .asRuntimeException());
+                        return;
                     }
-                    Integer pubkeyId = databaseManager.getPubKeyId(getLoggedUser(), CryptographicOperations.getStringPubKey(publicKey));
-                      //Todo insert permission in a for loop
-                    //databaseManager.insertPermission(filename, getLoggedUser(), );
+
+                    Map<Integer, String> pubKeysMap = request.getMessage().getPubKeysMap();
+                    for(Map.Entry<Integer, String> pubKey: pubKeysMap.entrySet()){
+                        databaseManager.insertPermission(filename, getLoggedUser(), pubKey.getKey(), pubKey.getValue());
+                    }
+
                 } catch (SQLException e){
                     responseObserver.onError(Status.DATA_LOSS
                             .withDescription(e.getMessage())
@@ -365,8 +371,6 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                     return;
                 }
 
-                // TODO store request.getMessage().getPubKeys()
-                // TODO give permission to user request.getMessage().getUsername() on file request.getMessage().getDocumentId()
 
                 AddPermissionResponse addPermissionResponse = AddPermissionResponse.newBuilder().setMessage("OK").build();
 
@@ -449,5 +453,42 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
         responseObserver.onCompleted();
 
         deleteLoginPubKey(getLoggedUser());
+    }
+
+    @Override
+    public void deleteFile(DeleteFileRequest request, StreamObserver<DeleteFileResponse> responseObserver) {
+        try {
+            logger.info(String.format("Received deleteFile Request: {Username: %s, Timestamp: %s}\n", getLoggedUser(), request.getMessage().getTimestamp()));
+
+            // Verify signature and ts
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(loggedPubKeys.get(getLoggedUser()).getBytes());
+            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
+
+            if (verifySig && verifyTimestamp) {
+                logger.info("Signature and Timestamp verified.");
+            }
+            String filename = request.getMessage().getDocumentId();
+
+            Files.deleteIfExists(Paths.get(Utils.getFileRepository(filename)));
+
+            if(!databaseManager.verifyOwner(filename, getLoggedUser())){
+                responseObserver.onError(Status.PERMISSION_DENIED
+                        .asRuntimeException());
+            }
+            databaseManager.deleteFile(filename);
+
+            responseObserver.onNext(DeleteFileResponse.newBuilder().build());
+            responseObserver.onCompleted();
+
+        } catch (IOException e) {
+            responseObserver.onError(Status.DATA_LOSS //has to do with file deleteIfExists
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        } catch (Exception e) {
+            responseObserver.onError(Status.INTERNAL
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        }
     }
 }
