@@ -317,10 +317,10 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 logger.info("Signature and Timestamp verified.");
 
                 Map<Integer,String> pubKeysMap =  databaseManager.getPubKeys(request.getMessage().getUsername());
-                List<String> pubKeys = new ArrayList<>(pubKeysMap.values());
 
-                GetPubKeysResponse getPubKeysResponse = GetPubKeysResponse.newBuilder().
-                        addAllPubKeys(pubKeys).
+
+               GetPubKeysResponse getPubKeysResponse = GetPubKeysResponse.newBuilder().
+                        putAllPubKeys(pubKeysMap).
                         build();
 
                 responseObserver.onNext(getPubKeysResponse);
@@ -354,11 +354,16 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 String filename = request.getMessage().getDocumentId();
                 try {
                     if (!databaseManager.verifyOwner(filename, getLoggedUser())){
-                        //todo
+                        responseObserver.onError(Status.PERMISSION_DENIED
+                                .asRuntimeException());
+                        return;
                     }
-                    Integer pubkeyId = databaseManager.getPubKeyId(getLoggedUser(), CryptographicOperations.getStringPubKey(publicKey));
-                      //Todo insert permission in a for loop
-                    //databaseManager.insertPermission(filename, getLoggedUser(), );
+
+                    Map<Integer, String> pubKeysMap = request.getMessage().getPubKeysMap();
+                    for(Map.Entry<Integer, String> pubKey: pubKeysMap.entrySet()){
+                        databaseManager.insertPermission(filename, getLoggedUser(), pubKey.getKey(), pubKey.getValue());
+                    }
+
                 } catch (SQLException e){
                     responseObserver.onError(Status.DATA_LOSS
                             .withDescription(e.getMessage())
@@ -366,8 +371,6 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                     return;
                 }
 
-                // TODO store request.getMessage().getPubKeys()
-                // TODO give permission to user request.getMessage().getUsername() on file request.getMessage().getDocumentId()
 
                 AddPermissionResponse addPermissionResponse = AddPermissionResponse.newBuilder().setMessage("OK").build();
 
