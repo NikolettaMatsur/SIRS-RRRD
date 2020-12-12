@@ -20,6 +20,7 @@ public class RrrdBackupApp {
     private final Logger logger;
     static String address;
     static int port;
+    static int max_versions;
     private final String certChainFilePath = "backup.crt";
     private final String privateKeyFilePath = "backup.key";
     private final String trustCertCollectionFilePath = "ca.crt";
@@ -77,6 +78,7 @@ public class RrrdBackupApp {
 
         address = args[0];
         port = Integer.parseInt(args[1]);
+        max_versions = Integer.parseInt(args[2]);
 
         RrrdBackupApp serverApp = new RrrdBackupApp(address, port);
 
