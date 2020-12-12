@@ -7,6 +7,7 @@ service RemoteServer {
   rpc Pull (PullRequest) returns (PullResponse) {}
   rpc Push (PushRequest) returns (PushResponse) {}
   rpc AddNewFile (AddFileRequest) returns (AddFileResponse) {}
+  rpc DeleteFile (DeleteFileRequest) returns (DeleteFileResponse) {}
   rpc GetPubKeys (GetPubKeysRequest) returns (GetPubKeysResponse) {}
   rpc AddPermission (AddPermissionRequest) returns (AddPermissionResponse) {}
   rpc Login (LoginRequest) returns (LoginResponse) {}
@@ -58,6 +59,18 @@ message AddFileResponse {
   string message = 1;
 }
 
+message DeleteFileRequest{
+  DeleteMessage message = 1;
+  string signature = 2;
+}
+
+message DeleteMessage{
+  string documentId = 1;
+}
+
+message DeleteFileResponse{
+}
+
 message GetPubKeysRequest {
   GetPubKeysMessage message = 1;
   string signature = 2;
@@ -69,7 +82,7 @@ message GetPubKeysMessage {
 }
 
 message GetPubKeysResponse {
-  repeated string pubKeys = 1;
+  map<int32, string> pubKeys = 1;
 }
 
 message AddPermissionRequest {
@@ -80,7 +93,7 @@ message AddPermissionRequest {
 message AddPermissionMessage {
   string documentId = 1;
   string username = 2;
-  repeated string pubKeys = 3;
+  map<int32, string> pubKeys = 3;
   string timestamp = 4;
 }
 
