@@ -10,6 +10,7 @@ service RemoteServer {
   rpc DeleteFile (DeleteFileRequest) returns (DeleteFileResponse) {}
   rpc GetPubKeys (GetPubKeysRequest) returns (GetPubKeysResponse) {}
   rpc AddPermission (AddPermissionRequest) returns (AddPermissionResponse) {}
+  rpc RemovePermission (RemovePermissionRequest) returns (RemovePermissionResponse) {}
   rpc Login (LoginRequest) returns (LoginResponse) {}
   rpc Logout (LogoutRequest) returns (LogoutResponse) {}
 }
@@ -100,6 +101,20 @@ message AddPermissionMessage {
 
 message AddPermissionResponse {
   string message = 1;
+}
+
+message RemovePermissionRequest {
+  RemovePermissionMessage message = 1;
+  string signature = 2;
+}
+
+message RemovePermissionMessage {
+  string documentId = 1;
+  string username = 2;
+  string timestamp = 3;
+}
+
+message RemovePermissionResponse {
 }
 
 message LoginRequest {
