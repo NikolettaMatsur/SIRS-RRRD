@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PublicKey;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.logging.Logger;
 
@@ -161,8 +162,9 @@ public class RrrdBackupService extends BackupServerGrpc.BackupServerImplBase {
         File[] directoryListing = dir.listFiles();
         if (directoryListing != null) {
             for (File child : directoryListing) {
-                if (!child.isDirectory()) {
+                if (!child.isDirectory() && child.getName().endsWith(".txt")) {
                     String[] metadata = DataOperations.readFile(child.getPath());
+                    System.out.println(Arrays.toString(metadata));
                     Version version = Version.newBuilder()
                             .setDate(metadata[0])
                             .setNumberOfFiles(Integer.parseInt(metadata[1]))
