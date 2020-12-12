@@ -317,6 +317,48 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
     }
 
     @Override
+    public void deleteFile(DeleteFileRequest request, StreamObserver<DeleteFileResponse> responseObserver) {
+        try {
+            logger.info(String.format("Received deleteFile Request: {Username: %s, Timestamp: %s}\n", getLoggedUser(), request.getMessage().getTimestamp()));
+
+            // Verify signature and ts
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
+            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
+
+            if (verifySig && verifyTimestamp) {
+                logger.info("Signature and Timestamp verified.");
+            } else {
+                String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
+                logger.info(message + " Aborting operation.");
+
+                throw new InvalidParameterException(message);
+            }
+            String filename = Utils.getFileRepository(request.getMessage().getDocumentId());
+
+            if (!databaseManager.verifyOwner(filename, getLoggedUser())) {
+                responseObserver.onError(Status.PERMISSION_DENIED
+                        .asRuntimeException());
+                return;
+            }
+            databaseManager.deleteFile(filename);
+            Files.deleteIfExists(Paths.get(filename));
+
+            responseObserver.onNext(DeleteFileResponse.newBuilder().build());
+            responseObserver.onCompleted();
+
+        } catch (IOException e) {
+            responseObserver.onError(Status.DATA_LOSS //has to do with file deleteIfExists
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        } catch (Exception e) {
+            responseObserver.onError(Status.INTERNAL
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
     public void getPubKeys(GetPubKeysRequest request, StreamObserver<GetPubKeysResponse> responseObserver) {
         try {
             logger.info(String.format("Received GetPubKeys Request: {Username: %s, Timestamp: %s}\n", request.getMessage().getUsername(), request.getMessage().getTimestamp()));
@@ -405,6 +447,48 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
     }
 
     @Override
+    public void removePermission(RemovePermissionRequest request, StreamObserver<RemovePermissionResponse> responseObserver) {
+        try {
+            logger.info(String.format("Received RemovePermissionRequest: {Username: %s, Timestamp: %s}\n", getLoggedUser(), request.getMessage().getTimestamp()));
+
+            // Verify signature and ts
+            PublicKey publicKey = CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
+            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
+            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
+
+            if (verifySig && verifyTimestamp) {
+                logger.info("Signature and Timestamp verified.");
+            } else {
+                String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
+                logger.info(message + " Aborting operation.");
+
+                throw new InvalidParameterException(message);
+            }
+            String filename = Utils.getFileRepository(request.getMessage().getDocumentId());
+
+            if (!databaseManager.verifyOwner(filename, getLoggedUser())) {
+                responseObserver.onError(Status.PERMISSION_DENIED
+                        .asRuntimeException());
+                return;
+            }
+            
+            databaseManager.deletePermission(filename, getLoggedUser());
+
+            responseObserver.onNext(RemovePermissionResponse.newBuilder().build());
+            responseObserver.onCompleted();
+        } catch (SQLException e) {
+            responseObserver.onError(Status.DATA_LOSS //from database manager
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+
+        } catch (Exception e) {
+            responseObserver.onError(Status.INTERNAL
+                    .withDescription(e.getMessage())
+                    .asRuntimeException());
+        }
+    }
+
+    @Override
     public void login(LoginRequest request, StreamObserver<LoginResponse> responseObserver) {
 
         try {
@@ -466,47 +550,5 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
         responseObserver.onCompleted();
 
         deleteLoginPubKey(getLoggedUser());
-    }
-
-    @Override
-    public void deleteFile(DeleteFileRequest request, StreamObserver<DeleteFileResponse> responseObserver) {
-        try {
-            logger.info(String.format("Received deleteFile Request: {Username: %s, Timestamp: %s}\n", getLoggedUser(), request.getMessage().getTimestamp()));
-
-            // Verify signature and ts
-            PublicKey publicKey = CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(loggedPubKeys.get(getLoggedUser())));
-            boolean verifySig = CryptographicOperations.verifySignature(publicKey, request.getMessage().toByteArray(), Base64.getDecoder().decode(request.getSignature()));
-            boolean verifyTimestamp = CryptographicOperations.verifyTimestamp(request.getMessage().getTimestamp());
-
-            if (verifySig && verifyTimestamp) {
-                logger.info("Signature and Timestamp verified.");
-            }else {
-                String message = !verifySig ? "Invalid Signature." : "Invalid TimeStamp.";
-                logger.info(message + " Aborting operation.");
-
-                throw new InvalidParameterException(message);
-            }
-            String filename = Utils.getFileRepository(request.getMessage().getDocumentId());
-
-            if (!databaseManager.verifyOwner(filename, getLoggedUser())) {
-                responseObserver.onError(Status.PERMISSION_DENIED
-                        .asRuntimeException());
-                return;
-            }
-            databaseManager.deleteFile(filename);
-            Files.deleteIfExists(Paths.get(filename));
-
-            responseObserver.onNext(DeleteFileResponse.newBuilder().build());
-            responseObserver.onCompleted();
-
-        } catch (IOException e) {
-            responseObserver.onError(Status.DATA_LOSS //has to do with file deleteIfExists
-                    .withDescription(e.getMessage())
-                    .asRuntimeException());
-        } catch (Exception e) {
-            responseObserver.onError(Status.INTERNAL
-                    .withDescription(e.getMessage())
-                    .asRuntimeException());
-        }
     }
 }
