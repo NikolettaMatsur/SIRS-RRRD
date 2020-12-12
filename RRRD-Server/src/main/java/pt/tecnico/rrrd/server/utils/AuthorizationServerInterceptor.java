@@ -16,7 +16,7 @@ public class AuthorizationServerInterceptor implements ServerInterceptor {
 
             if (value == null) {
                 serverCall.close(Status.UNAUTHENTICATED.withDescription("JWT Token is missing from Metadata"), metadata);
-                return new ServerCall.Listener() {};
+                return new ServerCall.Listener<>() {};
             }
 
             try {
@@ -32,7 +32,7 @@ public class AuthorizationServerInterceptor implements ServerInterceptor {
                 System.out.println("Verification failed - Unauthenticated!");
                 System.out.println(e.getMessage());
                 serverCall.close(Status.UNAUTHENTICATED.withDescription(e.getMessage()).withCause(e), metadata);
-                return new ServerCall.Listener() {};
+                return new ServerCall.Listener<>() {};
             }
 
         } else {
