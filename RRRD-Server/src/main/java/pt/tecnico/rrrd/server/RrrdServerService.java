@@ -416,7 +416,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
 
                     Map<Integer, String> pubKeysMap = request.getMessage().getPubKeysMap();
                     for (Map.Entry<Integer, String> pubKey : pubKeysMap.entrySet()) {
-                        databaseManager.insertPermission(filename, getLoggedUser(), pubKey.getKey(), pubKey.getValue());
+                        databaseManager.insertPermission(filename, request.getMessage().getUsername(), pubKey.getKey(), pubKey.getValue());
                     }
 
                 } catch (SQLException e) {
@@ -472,7 +472,7 @@ public class RrrdServerService extends RemoteServerGrpc.RemoteServerImplBase {
                 return;
             }
 
-            databaseManager.deletePermission(filename, getLoggedUser());
+            databaseManager.deletePermission(filename, request.getMessage().getUsername());
 
             responseObserver.onNext(RemovePermissionResponse.newBuilder().build());
             responseObserver.onCompleted();
