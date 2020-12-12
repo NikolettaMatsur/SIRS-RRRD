@@ -91,7 +91,6 @@ public class  RrrdServerApp {
 
         address = args[0];
         port = Integer.parseInt(args[1]);
-        updateInterval = Integer.parseInt(args[2]);
         RrrdServerApp serverApp = new RrrdServerApp(address, port);
         serverApp.start();
         ICommandHandler commandHandler = new CommandHandler();
