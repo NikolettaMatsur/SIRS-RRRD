@@ -29,6 +29,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -177,7 +178,7 @@ public class CommandHandler implements ICommandHandler {
                     setDocumentId(addPermission.getDocumentId()).
                     setUsername(addPermission.getUsername()).
                     setTimestamp(CryptographicOperations.getTimestamp()).
-                    addAllPubKeys(getPubKeys(addPermission.getUsername(), addPermission.getDocumentId())).
+                    putAllPubKeys(getPubKeys(addPermission.getUsername(), addPermission.getDocumentId())).
                     build();
 
             AddPermissionRequest addPermissionRequest = AddPermissionRequest.newBuilder().
@@ -196,7 +197,7 @@ public class CommandHandler implements ICommandHandler {
         }
     }
 
-    private List<String> getPubKeys(String username, String documentId) throws UnrecoverableKeyException, CertificateException,
+    private Map<Integer, String> getPubKeys(String username, String documentId) throws UnrecoverableKeyException, CertificateException,
             NoSuchAlgorithmException, KeyStoreException, IOException, SignatureException, InvalidKeyException, InvalidKeySpecException,
             NoSuchPaddingException, BadPaddingException, IllegalBlockSizeException {
 
@@ -213,14 +214,16 @@ public class CommandHandler implements ICommandHandler {
         GetPubKeysResponse getPubKeysResponse = this.blockingStub.getPubKeys(getPubKeysRequest);
 
         Key documentKey = CryptographicOperations.getDocumentKey(RrrdClientApp.keyStorePassword, documentId);
-        List<String> keys = new LinkedList<>();
-        for (String pubKey : getPubKeysResponse.getPubKeysList()) {
-            byte[] encryptedKey = CryptographicOperations.asymmetricEncrypt(documentKey.getEncoded(),
-                    CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(pubKey)));
-            keys.add(Base64.getEncoder().encodeToString(encryptedKey));
+
+        Map<Integer, String> pubKeys = getPubKeysResponse.getPubKeysMap();
+        for (Map.Entry<Integer, String> pubKey : pubKeys.entrySet()) {
+            byte[] encryptedKey =  CryptographicOperations.asymmetricEncrypt(documentKey.getEncoded(),
+                    CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(pubKey.getValue())));
+
+            pubKeys.replace(pubKey.getKey(),Base64.getEncoder().encodeToString(encryptedKey));
         }
 
-        return keys;
+        return pubKeys;
     }
 
     @Override
@@ -286,6 +289,7 @@ public class CommandHandler implements ICommandHandler {
 
         return jsonObject.get("documentData").getAsString();
     }
+
     public void changeRootDirectory(String path){
         this.clientRootDirectory = path;
     }
