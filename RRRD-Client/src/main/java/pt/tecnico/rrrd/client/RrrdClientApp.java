@@ -34,6 +34,8 @@ public class RrrdClientApp {
     public static String keyStorePassword;
     public static JwtCallCredential jwtCallCredential = new JwtCallCredential();
 
+    public static String username;
+
     public RrrdClientApp(String address, int port) throws SSLException, URISyntaxException {
         this.logger = Logger.getLogger(RrrdClientApp.class.getName());
         this.channel = this.initialize(address,port);
@@ -75,13 +77,17 @@ public class RrrdClientApp {
     }
 
     private static void login(ICommandHandler commandHandler, Scanner input) throws AuthenticationException {
-        System.out.println("Insert your credentials");
+        ((CommandHandler) commandHandler).changeRootDirectory("C:/sync/client/");
+        username = "client1";
+        String password = "password";
 
-        System.out.print("Username: ");
-        String username = input.nextLine();
-
-        System.out.print("Password: ");
-        String password = new String(System.console().readPassword());
+//        System.out.println("Insert your credentials");
+//
+//        System.out.print("Username: ");
+//        username = input.nextLine();
+//
+//        System.out.print("Password: ");
+//        String password = new String(System.console().readPassword());
         keyStorePassword = password;
 
         Login login = new Login(username, password);
@@ -148,6 +154,7 @@ public class RrrdClientApp {
                         break loop;
                     default:
                         System.out.println("Command not recognized.");
+                        command = null;
                         break;
                 }
                 if (command != null) {

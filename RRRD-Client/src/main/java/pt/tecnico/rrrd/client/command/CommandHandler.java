@@ -2,6 +2,7 @@ package pt.tecnico.rrrd.client.command;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import pt.tecnico.rrrd.client.RrrdClientApp;
 import pt.tecnico.rrrd.client.utils.Utils;
@@ -26,10 +27,7 @@ import java.nio.file.Paths;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Base64;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -63,11 +61,8 @@ public class CommandHandler implements ICommandHandler {
             PullResponse pullResponse = this.blockingStub.pull(pullRequest);
             logger.info(String.format("Pull Response received, decrypting...", pull.getDocumentId()));
 
-            byte[] documentKeyBytes = CryptographicOperations.getDocumentKey(RrrdClientApp.keyStorePassword, pullMessage.getDocumentId()).getEncoded();
-
-            //TODO: Change documentKeyBytes to decrypted key when db is up
-//            byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
-//                    CryptographicOperations.getPrivateKey(RrrdClientApp.keyStorePassword, "asymmetric_keys"));
+            byte[] documentKeyBytes = CryptographicOperations.asymmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocumentKey()),
+                    CryptographicOperations.getPrivateKey(RrrdClientApp.keyStorePassword, "asymmetric_keys"));
 
             SecretKey secretKey = CryptographicOperations.convertToSymmetricKey(documentKeyBytes);
             byte[] decryptedDocument = CryptographicOperations.symmetricDecrypt(Base64.getDecoder().decode(pullResponse.getDocument()),
@@ -77,7 +72,7 @@ public class CommandHandler implements ICommandHandler {
             String document = parseDocumentAndHash(decryptedDocument);
 
             PrintWriter writer = new PrintWriter( clientRootDirectory + pull.getDocumentId() + ".txt", StandardCharsets.UTF_8);
-            writer.println(new String(decryptedDocument));
+            writer.println(document);
             writer.close();
             logger.info(String.format("Pull Response decrypted and stored in %s.",clientRootDirectory + pull.getDocumentId() + ".txt"));
 
@@ -87,9 +82,11 @@ public class CommandHandler implements ICommandHandler {
             if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
                 System.err.println(e.getMessage());
             }
-
             if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
                 throw new AuthenticationException("Token expired please login again.");
+            }
+            if (e.getStatus().getCode() == Status.Code.PERMISSION_DENIED) {
+                logger.severe("User does not have permission to pull file.");
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -138,7 +135,7 @@ public class CommandHandler implements ICommandHandler {
 
             SecretKey secretKey = CryptographicOperations.createDocumentKey();
             AddFileMessage addFileMessage = AddFileMessage.newBuilder().
-                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(RrrdClientApp.keyStorePassword, "symmetric_key", jsonDocumentAndHash.getBytes())).
+                    setEncryptedDocument(CryptographicOperations.getEncryptedDocument(secretKey, jsonDocumentAndHash.getBytes())).
                     setDocumentId(addFile.getDocumentId()).
                     setTimestamp(CryptographicOperations.getTimestamp()).
                     build();
@@ -150,8 +147,9 @@ public class CommandHandler implements ICommandHandler {
 
             AddFileResponse addFileResponse = this.blockingStub.addNewFile(addFileRequest); // TODO catch exception that is thrown when an incorrect documentId is specified
             System.out.println("Received response: " + addFileResponse);
-
             CryptographicOperations.storeDocumentKey(RrrdClientApp.keyStorePassword, addFile.getDocumentId(), secretKey);
+
+            this.handle(new AddPermission(addFile.getDocumentId(), RrrdClientApp.username));
 
         } catch (NoSuchFileException e) {
 //            e.printStackTrace();
@@ -214,8 +212,9 @@ public class CommandHandler implements ICommandHandler {
         GetPubKeysResponse getPubKeysResponse = this.blockingStub.getPubKeys(getPubKeysRequest);
 
         Key documentKey = CryptographicOperations.getDocumentKey(RrrdClientApp.keyStorePassword, documentId);
+        Map<Integer, String> pubKeysTemp = getPubKeysResponse.getPubKeysMap();
+        HashMap<Integer, String> pubKeys = new HashMap<>(pubKeysTemp);
 
-        Map<Integer, String> pubKeys = getPubKeysResponse.getPubKeysMap();
         for (Map.Entry<Integer, String> pubKey : pubKeys.entrySet()) {
             byte[] encryptedKey =  CryptographicOperations.asymmetricEncrypt(documentKey.getEncoded(),
                     CryptographicOperations.convertToPublicKey(Base64.getDecoder().decode(pubKey.getValue())));
@@ -280,16 +279,21 @@ public class CommandHandler implements ICommandHandler {
                     setMessage(deleteMessage).
                     setSignature(CryptographicOperations.getSignature(RrrdClientApp.keyStorePassword, "asymmetric_keys", deleteMessage.toByteArray())).
                     build();
+            logger.info("Delete file request sent");
 
-            DeleteFileResponse deleteFileResponse = this.blockingStub.deleteFile(deleteFileRequest);
+            this.blockingStub.deleteFile(deleteFileRequest);
+
+            logger.info("Delete file done.");
 
         } catch (StatusRuntimeException e) {
             if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
                 System.err.println(e.getMessage());
             }
-
             if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
                 throw new AuthenticationException("Token expired please login again.");
+            }
+            if (e.getStatus().getCode() == Status.Code.PERMISSION_DENIED) {
+                logger.severe("User does not have permission to pull file.");
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());

@@ -20,9 +20,9 @@ public class CryptographicOperations {
 
     private static final String KEYSTORE_PATH = "KeyStore.jks";
     private static final String SYMMETRIC_ALGORITHM = "AES";
-    private static int SYMMETRIC_KEY_SIZE = 256;
+    private static final int SYMMETRIC_KEY_SIZE = 256;
     private static final String ASYMMETRIC_ALGORITHM = "RSA";
-    private static int ASYMMETRIC_KEY_SIZE = 2048;
+    private static final int ASYMMETRIC_KEY_SIZE = 2048;
     private static final String SIGN_ALGORITHM = "SHA256withRSA";
     private static final String HASH_ALGORITHM = "SHA-256";
     public static long FRESHNESS_MAX_INTERVAL = 5000;
@@ -97,7 +97,7 @@ public class CryptographicOperations {
     }
 
 
-    public static String getStringPubKey(PublicKey pubKey){
+    public static String getStringPubKey(PublicKey pubKey) {
         return Base64.getEncoder().encodeToString(pubKey.getEncoded());
     }
 
@@ -150,6 +150,15 @@ public class CryptographicOperations {
 
         return Base64.getEncoder().encodeToString(encryptedDocument);
     }
+
+    public static String getEncryptedDocument(Key key, byte[] data) throws NoSuchAlgorithmException, InvalidKeyException,
+            BadPaddingException, NoSuchPaddingException, IllegalBlockSizeException {
+
+        byte[] encryptedDocument = symmetricEncrypt(data, key);
+
+        return Base64.getEncoder().encodeToString(encryptedDocument);
+    }
+
 
     public static byte[] sign(byte[] data, PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException,
             SignatureException {

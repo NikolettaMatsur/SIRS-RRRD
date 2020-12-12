@@ -306,15 +306,47 @@ public class DatabaseManager {
         conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
         System.out.println("Removing file " + filename );
 
-        String query = "DELETE FROM files where filename=?";
+        String files = "DELETE FROM files WHERE filename=?";
 
-        stmt = conn.prepareStatement(query);
+        stmt = conn.prepareStatement(files);
         stmt.setString(1, filename);
 
         stmt.execute();
 
+        String permissions = "DELETE FROM permissions WHERE filename=?";
+
+        stmt = conn.prepareStatement(permissions);
+        stmt.setString(1, filename);
+        stmt.execute();
+
         stmt.close();
         conn.close();
+    }
+
+    public boolean verifyFileExists(String filename) throws SQLException {
+        PreparedStatement stmt = null;
+        Connection conn = null;
+        ResultSet rst = null;
+        boolean result = false;
+
+        conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
+        System.out.println("Verifiyng file existence " +  filename);
+
+        String query = "SELECT * FROM files WHERE filename=?";
+
+        stmt = conn.prepareStatement(query);
+        stmt.setString(1, filename);
+
+        rst = stmt.executeQuery();
+
+        if(rst.next()) {
+            result = true;
+        }
+
+        stmt.close();
+        conn.close();
+
+        return result;
     }
 
     public List<String> getAllAllowedFiles(String username) throws SQLException {
