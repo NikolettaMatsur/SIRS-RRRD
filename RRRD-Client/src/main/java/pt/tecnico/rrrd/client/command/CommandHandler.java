@@ -230,6 +230,7 @@ public class CommandHandler implements ICommandHandler {
 
             return loginResponse.getToken();
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println(e.getMessage());
             return null;
         }
@@ -327,8 +328,12 @@ public class CommandHandler implements ICommandHandler {
     }
 
     void verifyGRPCStatus(StatusRuntimeException e) throws AuthenticationException {
+        String message = "";
         if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
-            logger.severe(String.valueOf(e.getStatus().getCode()));
+            if("test".equals("add_file")){
+                message = "File already exists.";
+            }
+            logger.severe(String.valueOf(e.getStatus().getCode())+ ": "+ message);
         }
         else if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
             throw new AuthenticationException("Token expired please login again.");

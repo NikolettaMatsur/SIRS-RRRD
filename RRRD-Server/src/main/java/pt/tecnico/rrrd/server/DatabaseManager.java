@@ -414,7 +414,7 @@ public class DatabaseManager {
         Connection conn = null;
 
         conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
-        System.out.println("Inserting permission to" + username + " file: " + filename);
+        System.out.println("Inserting permission to " + username + " file: " + filename);
 
         String query = "INSERT INTO permissions(filename,username,pub_key_id,permission_key) VALUES(?,?,?,?)";
 

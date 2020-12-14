@@ -20,7 +20,7 @@
 		<c>RrrdClientApp</c>
 		<mainclass>${p}.${c}</mainclass>
 
-        <server.address>localhost</server.address>
+        <server.address>192.168.4.5</server.address>
         <server.port>8090</server.port>
 
 
