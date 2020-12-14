@@ -79,7 +79,7 @@ public class CommandHandler implements ICommandHandler {
         } catch (NoSuchFileException e) {
             System.out.println("No such file: " + e.getFile());
         } catch (StatusRuntimeException e) {
-            verifyGRPCStatus(e);
+            verifyGRPCStatus(e, pull);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -111,7 +111,7 @@ public class CommandHandler implements ICommandHandler {
         } catch (NoSuchFileException e) {
             logger.severe("No such file: " + e.getFile());
         } catch (StatusRuntimeException e) {
-          verifyGRPCStatus(e);
+          verifyGRPCStatus(e,push);
         } catch (Exception e) {
             logger.severe(e.getClass() + ": " + e.getMessage());
         }
@@ -145,7 +145,7 @@ public class CommandHandler implements ICommandHandler {
 //            e.printStackTrace();
             System.out.println("No such file: " + e.getFile());
         } catch (StatusRuntimeException e) {
-            verifyGRPCStatus(e);
+            verifyGRPCStatus(e, addFile);
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println(e.getMessage());
@@ -170,7 +170,7 @@ public class CommandHandler implements ICommandHandler {
             AddPermissionResponse addPermissionResponse = this.blockingStub.addPermission(addPermissionRequest);
             System.out.println("Received response: " + addPermissionResponse.getMessage());
         } catch (StatusRuntimeException e) {
-            verifyGRPCStatus(e);
+            verifyGRPCStatus(e, addPermission);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -240,7 +240,7 @@ public class CommandHandler implements ICommandHandler {
         try {
             LogoutResponse logoutResponse = this.blockingStub.logout(LogoutRequest.newBuilder().build());
         } catch (StatusRuntimeException e) {
-            verifyGRPCStatus(e);
+            verifyGRPCStatus(e, logout);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -265,7 +265,7 @@ public class CommandHandler implements ICommandHandler {
             logger.info("Delete file done.");
 
         } catch (StatusRuntimeException e) {
-            verifyGRPCStatus(e);
+            verifyGRPCStatus(e, deleteFile);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -290,7 +290,7 @@ public class CommandHandler implements ICommandHandler {
             this.blockingStub.removePermission(removePermissionRequest);
             logger.info("Remove permission donne");
         } catch (StatusRuntimeException e) {
-            verifyGRPCStatus(e);
+            verifyGRPCStatus(e, removePermission);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -326,9 +326,14 @@ public class CommandHandler implements ICommandHandler {
         return jsonObject.get("documentData").getAsString();
     }
 
-    void verifyGRPCStatus(StatusRuntimeException e) throws AuthenticationException {
+    void verifyGRPCStatus(StatusRuntimeException e, ICommand command) throws AuthenticationException {
+        String commandStr = command.getClass().getName().split("\\.")[command.getClass().getName().split("\\.").length-1];
+        String message = "";
         if (e.getStatus().getCode() == Status.Code.DATA_LOSS) {
-            logger.severe(String.valueOf(e.getStatus().getCode()));
+            if (commandStr.equals("AddFile")){
+                message = "File already exists.";
+            }
+            logger.severe(String.valueOf(e.getStatus().getCode()) + ": " + message);
         }
         else if (e.getStatus().getCode() == Status.Code.UNAUTHENTICATED) {
             throw new AuthenticationException("Token expired please login again.");
